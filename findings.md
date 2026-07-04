@@ -9,3 +9,4 @@
 - The existing oracle backend already exposes the needed decoupled API: `POST /jobs`, `GET /jobs/{job_id}`, `GET /jobs/{job_id}/results`, and `GET /api/status`.
 - In backend result labels, `battle_result == 0` maps to attack win and `battle_result == 1` maps to attack loss; `battle_result == 3` should be treated as a mixed/soft result when unit state is available.
 - Real smoke submission should require an already-ready persistent worker pool. A stopped backend is not enough for this repository because worker lifecycle ownership stays outside the algorithm package.
+- The decoded `heroes.json` `equipIds` field contains ordinary item IDs such as `875` and `422`. These must not be inferred as unique legend equipment.

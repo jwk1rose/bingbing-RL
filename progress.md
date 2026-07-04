@@ -16,3 +16,6 @@
 - Verified `/home/yons/game_apk_analysis/outputs/hero_stats_viewer_20260630_mumu/data/heroes.json` loads successfully: 184 loadouts.
 - Verified backend readiness locally: `http://127.0.0.1:18281` is not ready, so no real battle smoke job was submitted.
 - Ran `python3 -m pytest -q tests/test_real_resources_and_backend.py`: 5 passed.
+- Started the decoupled oracle backend at `http://127.0.0.1:18281` with 16 existing `dgame_lab_api35_1..16` emulators.
+- Fixed decoded hero resource loading so ordinary `equipIds` are not treated as unique legend equipment unless explicitly marked.
+- Ran `examples/backend_smoke.py` against the 16-worker backend: 3 requests completed successfully.

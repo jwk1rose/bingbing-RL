@@ -10,7 +10,7 @@ from masked_team_league.backend_codec import build_plan_battle_requests, result_
 from masked_team_league.constraints import ConstraintEngine
 from masked_team_league.generation import LegalPlanGenerator
 from masked_team_league.models import DefensePlan, MatchFormat, Team
-from masked_team_league.resources import load_hero_resource_bundle
+from masked_team_league.resources import load_hero_resource_bundle, load_unique_legend_equip_ids
 
 
 def _write_heroes(path: Path, count: int = 20) -> None:
@@ -37,7 +37,7 @@ def test_load_hero_resource_bundle_produces_position_aware_loadouts(tmp_path: Pa
     heroes_path = tmp_path / "heroes.json"
     _write_heroes(heroes_path)
 
-    bundle = load_hero_resource_bundle(heroes_path, unique_equip_star=4)
+    bundle = load_hero_resource_bundle(heroes_path, unique_equip_star=4, unique_legend_equip_ids={1001})
 
     assert len(bundle.loadouts) == 20
     first = bundle.loadouts[0]
@@ -54,10 +54,20 @@ def test_load_hero_resource_bundle_produces_position_aware_loadouts(tmp_path: Pa
     assert len(proto["_items"]) == 6
 
 
+def test_load_hero_resource_bundle_does_not_treat_normal_equips_as_unique(tmp_path: Path) -> None:
+    heroes_path = tmp_path / "heroes.json"
+    _write_heroes(heroes_path)
+
+    bundle = load_hero_resource_bundle(heroes_path)
+
+    assert bundle.by_hero_id[1].unique_equip_id is None
+    assert bundle.by_hero_id[1].normal_equip_ids[-1] == 1001
+
+
 def test_build_plan_battle_requests_uses_backend_proto_shape(tmp_path: Path) -> None:
     heroes_path = tmp_path / "heroes.json"
     _write_heroes(heroes_path, count=40)
-    bundle = load_hero_resource_bundle(heroes_path, unique_equip_star=5)
+    bundle = load_hero_resource_bundle(heroes_path, unique_equip_star=5, unique_legend_equip_ids={1000 + value for value in range(1, 41)})
     fmt = MatchFormat(3)
     generator = LegalPlanGenerator(bundle.loadouts, seed=10)
     attack = generator.generate_attack_plan(fmt)
@@ -208,3 +218,13 @@ def test_oracle_backend_ready_requires_running_worker_pool() -> None:
     assert is_oracle_backend_ready({"persistent_pool_ready": True}) is True
     assert is_oracle_backend_ready({"runtime_state": "stopped"}) is False
     assert is_oracle_backend_ready({"status": "ok"}) is False
+
+
+def test_load_unique_legend_equip_ids_from_lua(tmp_path: Path) -> None:
+    path = tmp_path / "LegendEquip.lua"
+    path.write_text(
+        'return {{[1] = {1,"A","i","s","p",true,4},[2] = {2,"B","i","s","p",false,4},[3] = {3,"C","i","s","p",true,4}}}',
+        encoding="utf-8",
+    )
+
+    assert load_unique_legend_equip_ids(path) == (1, 3)

@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import json
 from pathlib import Path
+import re
 from typing import Any, Iterable
 
 from .models import HeroRecord, Loadout
@@ -83,6 +84,7 @@ def load_hero_resource_bundle(
     *,
     hero_ids: Iterable[int] | None = None,
     unique_equip_star: int = 5,
+    unique_legend_equip_ids: Iterable[int] | None = None,
     standing_overrides: dict[int, float] | None = None,
 ) -> HeroResourceBundle:
     raw = json.loads(Path(hero_catalog_path).read_text(encoding="utf-8"))
@@ -90,6 +92,7 @@ def load_hero_resource_bundle(
     if not isinstance(records, list):
         raise ValueError("hero catalog must be a list or an object with a heroes list")
     selected = {int(hero_id) for hero_id in hero_ids} if hero_ids is not None else None
+    unique_ids = {int(equip_id) for equip_id in unique_legend_equip_ids or ()}
     overrides = {int(hero_id): float(value) for hero_id, value in (standing_overrides or {}).items()}
     resources: list[HeroResource] = []
     loadouts: list[Loadout] = []
@@ -100,7 +103,7 @@ def load_hero_resource_bundle(
         if selected is not None and hero_id not in selected:
             continue
         equip_ids = tuple(int(value) for value in item.get("equipIds", []) if int(value) > 0)
-        default_unique = equip_ids[-1] if equip_ids else None
+        default_unique = _default_unique_equip_id(item, equip_ids, unique_ids)
         bucket = str(item.get("positionType") or item.get("standingBucket") or "custom").lower()
         standing_rank = overrides.get(hero_id, _standing_rank(bucket, hero_id, index))
         stats = tuple(sorted((str(key), float(value)) for key, value in dict(item.get("stats") or {}).items() if isinstance(value, (int, float))))
@@ -129,8 +132,8 @@ def load_hero_resource_bundle(
             hero_id=hero_id,
             unique_equip_id=default_unique,
             unique_equip_star=unique_equip_star if default_unique is not None else None,
-            normal_equip_ids=tuple(equip_ids[:-1]),
-            normal_equip_features=(("normal_equip_count", float(max(0, len(equip_ids) - 1))),),
+            normal_equip_ids=tuple(equip_id for equip_id in equip_ids if equip_id != default_unique),
+            normal_equip_features=(("normal_equip_count", float(len([equip_id for equip_id in equip_ids if equip_id != default_unique]))),),
             level_features=(("level", float(resource.level)), ("rank", float(resource.rank)), ("stars", float(resource.stars))),
             final_stats=stats,
             final_power=gs,
@@ -147,6 +150,40 @@ def load_hero_resource_bundle(
         by_hero_id={loadout.hero_id: loadout for loadout in loadouts},
         resources_by_hero_id=resources_by_id,
     )
+
+
+def load_unique_legend_equip_ids(legend_equip_lua_path: Path) -> tuple[int, ...]:
+    path = Path(legend_equip_lua_path)
+    if not path.exists():
+        raise FileNotFoundError(f"legend equip lua does not exist: {path}")
+    text = path.read_text(encoding="utf-8")
+    ids: list[int] = []
+    pattern = re.compile(
+        r"\[(\d+)\]\s*=\s*\{\d+,\"[^\"]+\",\"[^\"]*\",\"[^\"]*\",\"[^\"]*\",(true|false),",
+        re.S,
+    )
+    for match in pattern.finditer(text):
+        if match.group(2) == "true":
+            ids.append(int(match.group(1)))
+    return tuple(sorted(ids))
+
+
+def _default_unique_equip_id(item: dict[str, Any], equip_ids: tuple[int, ...], unique_ids: set[int]) -> int | None:
+    for key in ("uniqueEquipId", "unique_equip_id", "legendEquipId", "legend_equip_id"):
+        value = item.get(key)
+        if value not in (None, ""):
+            return int(value)
+    legend = item.get("legendEquip") or item.get("legend_equip") or item.get("_legend_equip")
+    if isinstance(legend, dict):
+        equip = legend.get("_equip") or legend.get("equip") or legend
+        if isinstance(equip, dict):
+            value = equip.get("_type_id", equip.get("type_id", equip.get("id")))
+            if value not in (None, ""):
+                return int(value)
+    matching = [equip_id for equip_id in equip_ids if equip_id in unique_ids]
+    if not matching:
+        return None
+    return matching[-1]
 
 
 def _standing_rank(bucket: str, hero_id: int, index: int) -> float:
