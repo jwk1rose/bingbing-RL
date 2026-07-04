@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import random
 from typing import Any
 
 from .evaluation import match_win_probability
@@ -28,8 +29,8 @@ def build_plan_battle_requests(
 ) -> list[dict[str, Any]]:
     if attack.format != defense.format:
         raise ValueError("attack and defense formats must match")
-    attack_teams_proto = [_team_to_proto(team, resources) for team in attack.teams]
-    defense_teams_proto = [_team_to_proto(team, resources) for team in defense.teams]
+    attack_teams_proto = _side_to_proto(attack.teams, resources, seed=int(base_seed) + 17)
+    defense_teams_proto = _side_to_proto(defense.teams, resources, seed=int(base_seed) + 29)
     requests: list[dict[str, Any]] = []
     for round_index in range(attack.format.n_teams):
         round_id = round_index + 1
@@ -96,6 +97,48 @@ def result_to_attack_win_rate(result: dict[str, Any]) -> float:
 
 def _team_to_proto(team: Team, resources: HeroResourceBundle) -> list[dict[str, Any]]:
     return [resources.to_hero_proto(loadout, instance_id=index + 1) for index, loadout in enumerate(team.slots)]
+
+
+def _side_to_proto(teams: tuple[Team, ...], resources: HeroResourceBundle, *, seed: int) -> list[list[dict[str, Any]]]:
+    assignments = _legend_assignments(resources, sum(len(team.slots) for team in teams), seed=seed)
+    result: list[list[dict[str, Any]]] = []
+    flat_index = 0
+    for team in teams:
+        proto_team: list[dict[str, Any]] = []
+        for slot_index, loadout in enumerate(team.slots, start=1):
+            equip_id, equip_star = assignments[flat_index] if assignments else (None, 5)
+            proto_team.append(
+                resources.to_hero_proto(
+                    loadout,
+                    instance_id=slot_index,
+                    legend_equip_id=equip_id,
+                    legend_equip_star=equip_star,
+                    astrolabe_seed=seed + flat_index * 9973,
+                )
+            )
+            flat_index += 1
+        result.append(proto_team)
+    return result
+
+
+def _legend_assignments(resources: HeroResourceBundle, slot_count: int, *, seed: int) -> list[tuple[int | None, int]]:
+    rules = resources.runtime_rules
+    if rules is None or not rules.normal_legend_equip_ids:
+        return []
+    unique_ids = list(rules.unique_legend_equip_ids)
+    normal_ids = list(rules.normal_legend_equip_ids)
+    if len(unique_ids) > slot_count:
+        raise ValueError(f"cannot assign {len(unique_ids)} unique legend equips to {slot_count} slots")
+    rng = random.Random(seed)
+    assignments: list[tuple[int | None, int]] = [(None, 5) for _ in range(slot_count)]
+    unique_slots = rng.sample(range(slot_count), len(unique_ids))
+    rng.shuffle(unique_ids)
+    for slot, equip_id in zip(unique_slots, unique_ids):
+        assignments[slot] = (int(equip_id), 5)
+    for index, (equip_id, _star) in enumerate(assignments):
+        if equip_id is None:
+            assignments[index] = (int(rng.choice(normal_ids)), 5)
+    return assignments
 
 
 def _mixed_result_soft_label(result: dict[str, Any]) -> float | None:

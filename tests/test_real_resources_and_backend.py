@@ -9,8 +9,9 @@ from masked_team_league.backend import OracleBackendClient, OracleBackendSimulat
 from masked_team_league.backend_codec import build_plan_battle_requests, result_to_attack_win_rate
 from masked_team_league.constraints import ConstraintEngine
 from masked_team_league.generation import LegalPlanGenerator
-from masked_team_league.models import DefensePlan, MatchFormat, Team
+from masked_team_league.models import AttackPlan, DefensePlan, MatchFormat, Team
 from masked_team_league.resources import (
+    RuntimeResourceRules,
     load_decoded_runtime_rules,
     load_hero_resource_bundle,
     load_peak_arena_camp_hero_ids,
@@ -103,6 +104,71 @@ def test_build_plan_battle_requests_uses_backend_proto_shape(tmp_path: Path) -> 
     defense_heroes = [hero["_tid"] for team in requests[0]["oppo_teams_proto"] for hero in team]
     assert len(attack_heroes) == len(set(attack_heroes))
     assert len(defense_heroes) == len(set(defense_heroes))
+
+
+def test_build_plan_battle_requests_assigns_legend_equips_like_runtime_rules(tmp_path: Path) -> None:
+    heroes_path = tmp_path / "heroes.json"
+    _write_heroes(heroes_path, count=40)
+    rules = RuntimeResourceRules(unique_legend_equip_ids=(1, 2, 3), normal_legend_equip_ids=(5, 6))
+    bundle = load_hero_resource_bundle(heroes_path, runtime_rules=rules)
+    fmt = MatchFormat(3)
+    generator = LegalPlanGenerator(bundle.loadouts, seed=12)
+    attack = generator.generate_attack_plan(fmt)
+    defense = generator.generate_defense_plan(fmt)
+
+    requests = build_plan_battle_requests(
+        attack,
+        defense,
+        bundle,
+        request_prefix="legend",
+        base_seed=20260705,
+        camp_group=3,
+    )
+
+    for side_key in ("self_teams_proto", "oppo_teams_proto"):
+        equips = [
+            hero["_legend_equip"]["_equip"]["_type_id"]
+            for team in requests[0][side_key]
+            for hero in team
+        ]
+        assert sorted(equip for equip in equips if equip in {1, 2, 3}) == [1, 2, 3]
+        assert all(equip in {1, 2, 3, 5, 6} for equip in equips)
+        assert len(equips) == 15
+
+
+def test_build_plan_battle_requests_samples_astrolabe_attrs_by_seed(tmp_path: Path) -> None:
+    heroes_path = tmp_path / "heroes.json"
+    _write_heroes(heroes_path, count=40)
+    (tmp_path / "LegendEquip.lua").write_text(
+        'return {{[5] = {5,"普通","i","s","p",false,4}}}',
+        encoding="utf-8",
+    )
+    (tmp_path / "ShardToHero.lua").write_text("return {{}}", encoding="utf-8")
+    (tmp_path / "Astrolabe.lua").write_text(
+        'return {{[1] = {1,"星盘","i","s","p",1,900,0}}}',
+        encoding="utf-8",
+    )
+    (tmp_path / "AstrolabeRandomAttr.lua").write_text(
+        'return {{[1] = {900,101,"A",{},10,true,10},[2] = {900,102,"B",{},20,true,20},'
+        '[3] = {900,103,"C",{},30,true,30},[4] = {900,104,"D",{},40,true,40},'
+        '[5] = {900,105,"E",{},50,true,50},[6] = {900,106,"F",{},60,true,60}}}',
+        encoding="utf-8",
+    )
+    rules = load_decoded_runtime_rules(tmp_path)
+    bundle = load_hero_resource_bundle(heroes_path, runtime_rules=rules)
+    fmt = MatchFormat(3)
+    teams = (Team(bundle.loadouts[0:5]), Team(bundle.loadouts[5:10]), Team(bundle.loadouts[10:15]))
+    attack = AttackPlan(fmt, teams, "test")
+    defense = DefensePlan(fmt, teams, ((0, 0, 0, 0, 0),) * 3, "test")
+
+    first = build_plan_battle_requests(attack, defense, bundle, request_prefix="astro-a", base_seed=1)[0]
+    second = build_plan_battle_requests(attack, defense, bundle, request_prefix="astro-b", base_seed=2)[0]
+
+    first_ids = tuple(star["_id"] for star in first["self_teams_proto"][0][0]["_astrolabe"]["_stars"])
+    second_ids = tuple(star["_id"] for star in second["self_teams_proto"][0][0]["_astrolabe"]["_stars"])
+    assert len(first_ids) == 5
+    assert set(first_ids).issubset({101, 102, 103, 104, 105, 106})
+    assert first_ids != second_ids
 
 
 class _FakeBackendHandler(BaseHTTPRequestHandler):

@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import json
 from pathlib import Path
+import random
 import re
 from typing import Any, Iterable
 
@@ -45,6 +46,7 @@ class RuntimeResourceRules:
     normal_legend_equip_ids: tuple[int, ...] = ()
     shard_by_hero_id: dict[int, int] | None = None
     astrolabe_by_hero_id: dict[int, dict[str, Any]] | None = None
+    astrolabe_attr_values_by_hero_id: dict[int, dict[int, float]] | None = None
 
 
 @dataclass(frozen=True)
@@ -55,7 +57,16 @@ class HeroResourceBundle:
     resources_by_hero_id: dict[int, HeroResource]
     runtime_rules: RuntimeResourceRules | None = None
 
-    def to_hero_proto(self, loadout: Loadout, *, instance_id: int | None = None) -> dict[str, Any]:
+    def to_hero_proto(
+        self,
+        loadout: Loadout,
+        *,
+        instance_id: int | None = None,
+        legend_equip_id: int | None = None,
+        legend_equip_star: int = 5,
+        astrolabe_seed: int | None = None,
+        astrolabe_value_ratio: float = 1.0,
+    ) -> dict[str, Any]:
         resource = self.resources_by_hero_id.get(int(loadout.hero_id))
         if resource is None:
             raise KeyError(f"unknown hero id for proto conversion: {loadout.hero_id}")
@@ -77,7 +88,9 @@ class HeroResourceBundle:
             ],
             "_state": "idle",
         }
-        if loadout.unique_equip_id is not None:
+        if legend_equip_id is not None:
+            proto["_legend_equip"] = _legend_equip_proto(int(legend_equip_id), int(legend_equip_star))
+        elif loadout.unique_equip_id is not None:
             proto["_legend_equip"] = {
                 "_equip": {
                     "_type_id": int(loadout.unique_equip_id),
@@ -94,7 +107,12 @@ class HeroResourceBundle:
             shard_id = (self.runtime_rules.shard_by_hero_id or {}).get(int(loadout.hero_id))
             if shard_id:
                 proto["_shard"] = {"_id": int(shard_id), "_level": 25}
-            astrolabe = (self.runtime_rules.astrolabe_by_hero_id or {}).get(int(loadout.hero_id))
+            astrolabe = _astrolabe_proto_from_rules(
+                self.runtime_rules,
+                int(loadout.hero_id),
+                seed=astrolabe_seed,
+                value_ratio=astrolabe_value_ratio,
+            )
             if astrolabe:
                 proto["_astrolabe"] = astrolabe
         return proto
@@ -181,11 +199,13 @@ def load_hero_resource_bundle(
 def load_decoded_runtime_rules(decoded_dir: Path) -> RuntimeResourceRules:
     decoded = Path(decoded_dir)
     unique_ids, normal_ids = load_legend_equip_pools(decoded / "LegendEquip.lua")
+    astrolabe_protos, astrolabe_attr_values = load_astrolabe_resources(decoded)
     return RuntimeResourceRules(
         unique_legend_equip_ids=unique_ids,
         normal_legend_equip_ids=normal_ids,
         shard_by_hero_id=load_shard_by_hero_id(decoded / "ShardToHero.lua"),
-        astrolabe_by_hero_id=load_astrolabe_protos(decoded),
+        astrolabe_by_hero_id=astrolabe_protos,
+        astrolabe_attr_values_by_hero_id=astrolabe_attr_values,
     )
 
 
@@ -225,11 +245,19 @@ def load_shard_by_hero_id(shard_lua_path: Path) -> dict[int, int]:
 
 
 def load_astrolabe_protos(decoded_dir: Path, *, value_ratio: float = 1.0) -> dict[int, dict[str, Any]]:
+    return load_astrolabe_resources(decoded_dir, value_ratio=value_ratio)[0]
+
+
+def load_astrolabe_resources(
+    decoded_dir: Path,
+    *,
+    value_ratio: float = 1.0,
+) -> tuple[dict[int, dict[str, Any]], dict[int, dict[int, float]]]:
     decoded = Path(decoded_dir)
     astrolabe_path = decoded / "Astrolabe.lua"
     random_attr_path = decoded / "AstrolabeRandomAttr.lua"
     if not astrolabe_path.exists() or not random_attr_path.exists():
-        return {}
+        return {}, {}
     random_text = random_attr_path.read_text(encoding="utf-8")
     max_values: dict[int, dict[int, float]] = {}
     random_pattern = re.compile(
@@ -243,6 +271,7 @@ def load_astrolabe_protos(decoded_dir: Path, *, value_ratio: float = 1.0) -> dic
 
     astrolabe_text = astrolabe_path.read_text(encoding="utf-8")
     result: dict[int, dict[str, Any]] = {}
+    attr_values_by_hero: dict[int, dict[int, float]] = {}
     astrolabe_pattern = re.compile(
         r"\[(\d+)\]\s*=\s*\{\s*\d+\s*,\s*\"[^\"]+\"\s*,\s*\"[^\"]*\"\s*,\s*\"[^\"]*\"\s*,\s*\"[^\"]*\"\s*,\s*(\d+)\s*,\s*(\d+)\s*,",
         re.S,
@@ -253,16 +282,12 @@ def load_astrolabe_protos(decoded_dir: Path, *, value_ratio: float = 1.0) -> dic
         attr_ids = sorted(max_values.get(random_group, {}))[:5]
         if len(attr_ids) < 5:
             continue
-        result[hero_id] = {
-            "_level": 80,
-            "_gs": 234,
-            "_is_unlock": True,
-            "_stars": [
-                {"_index": index, "_id": attr_id, "_value": int(max_values[random_group][attr_id] * value_ratio + 0.5)}
-                for index, attr_id in enumerate(attr_ids, start=1)
-            ],
-        }
-    return result
+        attr_values_by_hero[hero_id] = dict(max_values[random_group])
+        result[hero_id] = _astrolabe_proto_from_attr_values(
+            {attr_id: max_values[random_group][attr_id] for attr_id in attr_ids},
+            value_ratio=value_ratio,
+        )
+    return result, attr_values_by_hero
 
 
 def load_peak_arena_camp_hero_ids(decoded_dir: Path, *, camp_group: int = 3) -> tuple[int, ...]:
@@ -370,6 +395,40 @@ def _legend_equip_proto(equip_id: int, star: int) -> dict[str, Any]:
 
 def _deterministic_normal_legend_equip_id(hero_id: int, normal_ids: tuple[int, ...]) -> int:
     return int(normal_ids[int(hero_id) % len(normal_ids)])
+
+
+def _astrolabe_proto_from_rules(
+    rules: RuntimeResourceRules,
+    hero_id: int,
+    *,
+    seed: int | None,
+    value_ratio: float,
+) -> dict[str, Any] | None:
+    attr_values = (rules.astrolabe_attr_values_by_hero_id or {}).get(hero_id)
+    if attr_values and seed is not None and len(attr_values) >= 5:
+        rng = random.Random(seed)
+        chosen = sorted(rng.sample(list(attr_values), 5))
+        return _astrolabe_proto_from_attr_values(
+            {attr_id: attr_values[attr_id] for attr_id in chosen},
+            value_ratio=value_ratio,
+        )
+    return (rules.astrolabe_by_hero_id or {}).get(hero_id)
+
+
+def _astrolabe_proto_from_attr_values(
+    attr_values: dict[int, float],
+    *,
+    value_ratio: float,
+) -> dict[str, Any]:
+    return {
+        "_level": 80,
+        "_gs": 234,
+        "_is_unlock": True,
+        "_stars": [
+            {"_index": index, "_id": attr_id, "_value": int(attr_values[attr_id] * value_ratio + 0.5)}
+            for index, attr_id in enumerate(sorted(attr_values), start=1)
+        ],
+    }
 
 
 def _standing_rank(bucket: str, hero_id: int, index: int) -> float:

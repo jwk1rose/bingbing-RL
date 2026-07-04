@@ -12,3 +12,4 @@
 - The decoded `heroes.json` `equipIds` field contains ordinary item IDs such as `875` and `422`. These must not be inferred as unique legend equipment.
 - New battle requests must match the old random-lineup proto shape closely. Several heroes can fail in Lua when `_legend_equip`, `_shard`, or `_astrolabe` runtime fields are missing.
 - Resource selection for league rounds should use `PeakArenaCampGroup`/`PeakArenaCampList` rather than the full decoded hero catalog.
+- Old random-lineup requests assign all unique legend equips once per side, then fill remaining slots with normal legend equips. The league runner now mirrors that side-level rule.

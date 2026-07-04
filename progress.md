@@ -24,3 +24,6 @@
 - Added decoded runtime rules for `PeakArenaCampGroup`, legend equipment pools, shards, and astrolabe protos.
 - First real round attempt failed with 9/12 completed due to incomplete proto fields; fixed by adding decoded runtime fields.
 - Ran real small round `exports/masked_league_smoke/round_0002`: 2 defenses, 4 attack/defense pairs, 12 oracle requests, completed successfully.
+- Updated request construction to follow the old random-lineup legend equipment rule: each side receives every unique legend equip once, remaining slots receive normal legend equips.
+- Updated astrolabe construction to sample 5 attributes by seed, matching the old request behavior more closely.
+- Ran real small round `exports/masked_league_smoke/round_0003`: 12 oracle requests completed; inspected request fields and confirmed unique legends, shards, astrolabes, and `peakArenaCampGroup=3`.
