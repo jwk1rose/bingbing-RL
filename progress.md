@@ -10,3 +10,9 @@
 - Added tests for legality, hidden domains, belief, match evaluation, attack/defense oracle outputs, league, scheduler, and legal proposal generation.
 - Ran `python3 -m pytest -q`: 15 passed.
 - Created initial git commit on `main`.
+- Added real decoded hero resource loading from `heroes.json`, including unique equipment, normal equipment summary, power/stats, and position-aware ordering.
+- Added oracle backend request/result adapters and a stdlib HTTP client for the decoupled persistent backend.
+- Added `examples/backend_smoke.py` for submitting one legal generated BO3/BO5 match to an already-ready backend.
+- Verified `/home/yons/game_apk_analysis/outputs/hero_stats_viewer_20260630_mumu/data/heroes.json` loads successfully: 184 loadouts.
+- Verified backend readiness locally: `http://127.0.0.1:18281` is not ready, so no real battle smoke job was submitted.
+- Ran `python3 -m pytest -q tests/test_real_resources_and_backend.py`: 5 passed.

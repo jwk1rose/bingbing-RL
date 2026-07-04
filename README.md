@@ -23,3 +23,14 @@ Run tests:
 ```bash
 python3 -m pytest -q
 ```
+
+Submit one generated legal smoke match to an already running oracle backend.
+The backend must report a ready worker pool; this script does not start or stop
+emulators.
+
+```bash
+python3 examples/backend_smoke.py \
+  --backend http://127.0.0.1:18281 \
+  --heroes-json /home/yons/game_apk_analysis/outputs/hero_stats_viewer_20260630_mumu/data/heroes.json \
+  --teams 3
+```

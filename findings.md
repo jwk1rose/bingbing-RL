@@ -6,3 +6,6 @@
 - Team slot order is position-aware and must be strictly increasing by `standing_rank`.
 - The minimum deliverable is data structures, legal generator, SingleTeamWinrateModel interface, complete-defense AttackOracle, simulation cache, successive halving, diversity selection, and output explanation.
 - Neural networks should not be trained first. Oracle search and legal data generation come before distillation.
+- The existing oracle backend already exposes the needed decoupled API: `POST /jobs`, `GET /jobs/{job_id}`, `GET /jobs/{job_id}/results`, and `GET /api/status`.
+- In backend result labels, `battle_result == 0` maps to attack win and `battle_result == 1` maps to attack loss; `battle_result == 3` should be treated as a mixed/soft result when unit state is available.
+- Real smoke submission should require an already-ready persistent worker pool. A stopped backend is not enough for this repository because worker lifecycle ownership stays outside the algorithm package.
