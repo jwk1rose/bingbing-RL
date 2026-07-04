@@ -34,3 +34,18 @@ python3 examples/backend_smoke.py \
   --heroes-json /home/yons/game_apk_analysis/outputs/hero_stats_viewer_20260630_mumu/data/heroes.json \
   --teams 3
 ```
+
+Run one small true-oracle league round:
+
+```bash
+python3 scripts/run_league_round.py \
+  --backend http://127.0.0.1:18281 \
+  --heroes-json /home/yons/game_apk_analysis/outputs/hero_stats_viewer_20260630_mumu/data/heroes.json \
+  --decoded-dir /home/yons/game_apk_analysis/exports/current_ptr_hotpatch_after_login_20260626/decoded \
+  --out-dir exports/masked_league/round_0001 \
+  --round-id round_0001 \
+  --teams 3 \
+  --defenses 20 \
+  --attacks-per-defense 200 \
+  --oracle-top-k 20
+```

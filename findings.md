@@ -10,3 +10,5 @@
 - In backend result labels, `battle_result == 0` maps to attack win and `battle_result == 1` maps to attack loss; `battle_result == 3` should be treated as a mixed/soft result when unit state is available.
 - Real smoke submission should require an already-ready persistent worker pool. A stopped backend is not enough for this repository because worker lifecycle ownership stays outside the algorithm package.
 - The decoded `heroes.json` `equipIds` field contains ordinary item IDs such as `875` and `422`. These must not be inferred as unique legend equipment.
+- New battle requests must match the old random-lineup proto shape closely. Several heroes can fail in Lua when `_legend_equip`, `_shard`, or `_astrolabe` runtime fields are missing.
+- Resource selection for league rounds should use `PeakArenaCampGroup`/`PeakArenaCampList` rather than the full decoded hero catalog.

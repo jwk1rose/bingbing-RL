@@ -19,3 +19,8 @@
 - Started the decoupled oracle backend at `http://127.0.0.1:18281` with 16 existing `dgame_lab_api35_1..16` emulators.
 - Fixed decoded hero resource loading so ordinary `equipIds` are not treated as unique legend equipment unless explicitly marked.
 - Ran `examples/backend_smoke.py` against the 16-worker backend: 3 requests completed successfully.
+- Added `OracleBatchEvaluator` for batched true-oracle evaluation with cache population.
+- Added `LeagueRoundRunner` and `scripts/run_league_round.py` for one real round: defense generation, attack oracle top-K, backend validation, artifact writing, league pool/payoff update.
+- Added decoded runtime rules for `PeakArenaCampGroup`, legend equipment pools, shards, and astrolabe protos.
+- First real round attempt failed with 9/12 completed due to incomplete proto fields; fixed by adding decoded runtime fields.
+- Ran real small round `exports/masked_league_smoke/round_0002`: 2 defenses, 4 attack/defense pairs, 12 oracle requests, completed successfully.

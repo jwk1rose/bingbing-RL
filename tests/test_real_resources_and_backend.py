@@ -10,7 +10,12 @@ from masked_team_league.backend_codec import build_plan_battle_requests, result_
 from masked_team_league.constraints import ConstraintEngine
 from masked_team_league.generation import LegalPlanGenerator
 from masked_team_league.models import DefensePlan, MatchFormat, Team
-from masked_team_league.resources import load_hero_resource_bundle, load_unique_legend_equip_ids
+from masked_team_league.resources import (
+    load_decoded_runtime_rules,
+    load_hero_resource_bundle,
+    load_peak_arena_camp_hero_ids,
+    load_unique_legend_equip_ids,
+)
 
 
 def _write_heroes(path: Path, count: int = 20) -> None:
@@ -228,3 +233,48 @@ def test_load_unique_legend_equip_ids_from_lua(tmp_path: Path) -> None:
     )
 
     assert load_unique_legend_equip_ids(path) == (1, 3)
+
+
+def test_load_peak_arena_camp_hero_ids_from_decoded_lua(tmp_path: Path) -> None:
+    (tmp_path / "PeakArenaCampGroup.lua").write_text(
+        "return {{[3] = {3,{[1] = 301,[2] = 302}}},{},1}",
+        encoding="utf-8",
+    )
+    (tmp_path / "PeakArenaCampList.lua").write_text(
+        'return {{[301] = {301,{[1] = 10,[2] = 20},"A"},[302] = {302,{[1] = 20,[2] = 30},"B"}}},{},1}',
+        encoding="utf-8",
+    )
+
+    assert load_peak_arena_camp_hero_ids(tmp_path, camp_group=3) == (10, 20, 30)
+
+
+def test_decoded_runtime_rules_add_battle_only_proto_fields(tmp_path: Path) -> None:
+    heroes_path = tmp_path / "heroes.json"
+    _write_heroes(heroes_path, count=3)
+    (tmp_path / "LegendEquip.lua").write_text(
+        'return {{[1] = {1,"唯一","i","s","p",true,4},[5] = {5,"普通","i","s","p",false,4}}}',
+        encoding="utf-8",
+    )
+    (tmp_path / "ShardToHero.lua").write_text(
+        'return {{[10011] = {10011,1,"英雄1魂匣"}}}',
+        encoding="utf-8",
+    )
+    (tmp_path / "Astrolabe.lua").write_text(
+        'return {{[1] = {1,"星盘","i","s","p",1,900,0}}}',
+        encoding="utf-8",
+    )
+    (tmp_path / "AstrolabeRandomAttr.lua").write_text(
+        'return {{[1] = {900,101,"A",{},10,true,10},[2] = {900,102,"B",{},20,true,20},'
+        '[3] = {900,103,"C",{},30,true,30},[4] = {900,104,"D",{},40,true,40},'
+        '[5] = {900,105,"E",{},50,true,50}}}',
+        encoding="utf-8",
+    )
+
+    rules = load_decoded_runtime_rules(tmp_path)
+    bundle = load_hero_resource_bundle(heroes_path, runtime_rules=rules)
+    proto = bundle.to_hero_proto(bundle.by_hero_id[1])
+
+    assert proto["_legend_equip"]["_equip"]["_type_id"] == 5
+    assert proto["_shard"] == {"_id": 10011, "_level": 25}
+    assert proto["_astrolabe"]["_is_unlock"] is True
+    assert len(proto["_astrolabe"]["_stars"]) == 5

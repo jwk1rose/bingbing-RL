@@ -61,6 +61,17 @@ Status: complete
 - Add a backend smoke example that submits one BO3/BO5 plan only when the worker pool is ready.
 - Verify request/result scoring with unit tests and the real decoded hero catalog.
 
+## Phase 8: Real Oracle League Round
+
+Status: complete
+
+- Add batch oracle evaluator for many attack/defense plan pairs in one backend job.
+- Populate the simulation cache from true oracle round results.
+- Add one-round league runner: generate defenses, search attack candidates, true-oracle top-K, write artifacts, update league pools/payoffs.
+- Add CLI entry point `scripts/run_league_round.py`.
+- Add decoded runtime rules so battle protos include camp-group filtering, legend equipment, shard, and astrolabe fields.
+- Verify with a real 16-worker backend smoke round.
+
 ## Errors Encountered
 
 | Error | Attempt | Resolution |
@@ -68,3 +79,4 @@ Status: complete
 | `apply_patch` wrote files into the old repository | 1 | Copied generated files to the new repository, restored old tracked files, and removed accidental untracked code from the old repository. |
 | One illegal mask test used a legal BO3 mask | 1 | Replaced it with invalid mask values to test rejection correctly. |
 | Oracle backend was not ready during smoke verification | 1 | Did not submit real battle jobs; recorded readiness failure and left a smoke command for use after backend startup. |
+| First real league round had 3 oracle errors from Lua battle scripts | 1 | Compared new request proto with old random-lineup proto; added decoded runtime fields and camp-group resource loading. |
