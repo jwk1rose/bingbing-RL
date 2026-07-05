@@ -10,9 +10,9 @@ import pytest
 
 torch = pytest.importorskip("torch")
 
-from masked_team_league.checkpointing import CheckpointRegistry
+from masked_team_league.training.checkpoints import CheckpointRegistry
 from masked_team_league.belief import BeliefEngine
-from masked_team_league.belief_ranker import (
+from masked_team_league.belief.ranker import (
     BeliefRankerTrainingSample,
     TorchBeliefRanker,
     TorchBeliefRankerAdapter,
@@ -25,7 +25,7 @@ from masked_team_league.belief_ranker import (
 )
 from masked_team_league.constraints import ConstraintEngine
 from masked_team_league.generation import LegalPlanGenerator
-from masked_team_league.models import DefensePlan, Team, observe_defense
+from masked_team_league.domain import DefensePlan, Team, observe_defense
 
 
 def test_torch_belief_ranker_adapter_scores_observation_candidate(loadouts, fmt3):
@@ -174,7 +174,7 @@ def test_belief_ranker_evaluation_and_checkpoint_round_trip(tmp_path, loadouts, 
 
 def test_train_belief_ranker_script_has_help():
     result = subprocess.run(
-        [sys.executable, "scripts/train_belief_ranker.py", "--help"],
+        [sys.executable, "-m", "masked_team_league.cli.commands.train_belief_ranker", "--help"],
         check=False,
         capture_output=True,
         text=True,
@@ -189,7 +189,7 @@ def test_train_belief_ranker_script_has_help():
 
 def test_build_belief_ranker_dataset_script_has_help():
     result = subprocess.run(
-        [sys.executable, "scripts/build_belief_ranker_dataset.py", "--help"],
+        [sys.executable, "-m", "masked_team_league.cli.commands.build_belief_ranker_dataset", "--help"],
         check=False,
         capture_output=True,
         text=True,

@@ -2,16 +2,16 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from masked_team_league.ablation import AblationSuiteReport
-from masked_team_league.metrics import DailyTrainingReport
-from masked_team_league.output_contracts import (
+from masked_team_league.reporting.ablation import AblationSuiteReport
+from masked_team_league.reporting.metrics import DailyTrainingReport
+from masked_team_league.reporting.contracts import (
     OUTPUT_CONTRACTS,
     REQUIRED_RUNTIME_TRAINING_SCHEMA_VERSIONS,
     output_contract_registry,
 )
-from masked_team_league.real_calibration import RealCalibrationIngestionSummary, RealCalibrationSampleBuildSummary, VersionDriftReport
-from masked_team_league.real_calibration import build_real_calibration_validation_report
-from masked_team_league.reports import (
+from masked_team_league.real_platform.calibration import RealCalibrationIngestionSummary, RealCalibrationSampleBuildSummary, VersionDriftReport
+from masked_team_league.real_platform.calibration import build_real_calibration_validation_report
+from masked_team_league.reporting.reports import (
     build_active_query_feedback_report,
     build_active_real_query_dispatch_validation_report,
     build_attack_oracle_failure_validation_report,
@@ -24,7 +24,7 @@ from masked_team_league.reports import (
     build_production_readiness_report,
     build_underdog_residual_validation_report,
 )
-from masked_team_league.training_schedule import (
+from masked_team_league.training.schedule import (
     RecurringTrainingSchedulerState,
     TrainingRunSummary,
     TrainingSchedule,

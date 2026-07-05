@@ -5,7 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from masked_team_league.ablation import (
+from masked_team_league.reporting.ablation import (
     V4_REQUIRED_ABLATION_VARIANTS,
     build_ablation_suite_report,
     build_v4_ablation_experiment_plan,
@@ -122,7 +122,7 @@ def test_ablation_suite_reports_required_variant_gaps_and_metric_deltas(tmp_path
 
 def test_run_ablation_suite_script_has_help():
     result = subprocess.run(
-        [sys.executable, "scripts/run_ablation_suite.py", "--help"],
+        [sys.executable, "-m", "masked_team_league.cli.commands.run_ablation_suite", "--help"],
         check=False,
         capture_output=True,
         text=True,
@@ -159,7 +159,7 @@ def test_v4_ablation_experiment_plan_includes_required_variants_and_controls(tmp
 
     variants = {variant["variant_id"]: variant for variant in plan["variants"]}
     baseline_command = variants["baseline"]["command"]
-    assert baseline_command[:2] == [sys.executable, "scripts/run_league_round.py"]
+    assert baseline_command[:3] == [sys.executable, "-m", "masked_team_league.cli.commands.run_league_round"]
     assert "--backend" in baseline_command
     assert "--heroes-json" in baseline_command
     assert "--decoded-dir" in baseline_command
@@ -199,7 +199,7 @@ def test_v4_ablation_experiment_plan_includes_required_variants_and_controls(tmp
 
 def test_run_v4_ablation_experiments_script_has_help():
     result = subprocess.run(
-        [sys.executable, "scripts/run_v4_ablation_experiments.py", "--help"],
+        [sys.executable, "-m", "masked_team_league.cli.commands.run_v4_ablation_experiments", "--help"],
         check=False,
         capture_output=True,
         text=True,

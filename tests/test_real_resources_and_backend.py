@@ -5,12 +5,12 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from masked_team_league.backend import OracleBackendClient, OracleBackendSimulator, is_oracle_backend_ready
-from masked_team_league.backend_codec import build_plan_battle_requests, result_to_attack_win_rate
+from masked_team_league.real_platform.backend import OracleBackendClient, OracleBackendSimulator, is_oracle_backend_ready
+from masked_team_league.real_platform.backend_codec import build_plan_battle_requests, result_to_attack_win_rate
 from masked_team_league.constraints import ConstraintEngine
 from masked_team_league.generation import LegalPlanGenerator
-from masked_team_league.models import AttackPlan, DefensePlan, MatchFormat, Team
-from masked_team_league.resources import (
+from masked_team_league.domain import AttackPlan, DefensePlan, MatchFormat, Team
+from masked_team_league.real_platform.resources import (
     DEFAULT_ORACLE_EXCLUDED_HERO_IDS,
     RuntimeResourceRules,
     load_decoded_runtime_rules,

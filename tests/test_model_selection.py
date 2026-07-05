@@ -4,8 +4,8 @@ import json
 import subprocess
 import sys
 
-from masked_team_league.checkpointing import CheckpointRegistry, ModelCheckpointRecord
-from masked_team_league.model_selection import (
+from masked_team_league.training.checkpoints import CheckpointRegistry, ModelCheckpointRecord
+from masked_team_league.training.model_selection import (
     build_jsonl_split_manifest,
     load_split_manifest,
     select_best_checkpoint,
@@ -87,7 +87,7 @@ def test_select_best_checkpoint_filters_registry_and_writes_selection(tmp_path):
 
 def test_select_model_checkpoint_script_has_help():
     result = subprocess.run(
-        [sys.executable, "scripts/select_model_checkpoint.py", "--help"],
+        [sys.executable, "-m", "masked_team_league.cli.commands.select_model_checkpoint", "--help"],
         check=False,
         capture_output=True,
         text=True,
@@ -101,7 +101,7 @@ def test_select_model_checkpoint_script_has_help():
 
 def test_build_split_manifest_script_has_help():
     result = subprocess.run(
-        [sys.executable, "scripts/build_split_manifest.py", "--help"],
+        [sys.executable, "-m", "masked_team_league.cli.commands.build_split_manifest", "--help"],
         check=False,
         capture_output=True,
         text=True,

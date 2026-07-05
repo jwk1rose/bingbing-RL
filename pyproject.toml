@@ -9,6 +9,14 @@ description = "Position-aware masked BO3/BO5 attack-defense league search system
 requires-python = ">=3.10"
 dependencies = []
 
+[project.scripts]
+mtl-run-round = "masked_team_league.cli.run_round:main"
+mtl-run-selfplay = "masked_team_league.cli.run_selfplay:main"
+mtl-train = "masked_team_league.cli.train:main"
+mtl-report = "masked_team_league.cli.report:main"
+mtl-calibrate = "masked_team_league.cli.calibrate:main"
+mtl-ablate = "masked_team_league.cli.ablate:main"
+
 [project.optional-dependencies]
 dev = ["pytest>=8"]
 torch = ["torch>=2"]

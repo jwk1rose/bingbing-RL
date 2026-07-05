@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from masked_team_league.metrics import (
+from masked_team_league.reporting.metrics import (
     DailyTrainingReport,
     binary_auc,
     brier_score,

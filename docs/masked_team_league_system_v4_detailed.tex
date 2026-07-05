@@ -2402,6 +2402,9 @@ use\_counter\_sensitivity & true & 使用 AttackOracle 输出变化特征。\\
 \section{交付物清单}
 最终交付必须包括：源代码、配置文件、模型权重、训练数据版本、仿真器版本、真实数据 schema、评估报告、失败案例集、可复现实验脚本、模块接口文档和本设计文档。
 
+\section{实现目录映射}
+当前代码实现按本文概念分层组织。日常维护时，以 \texttt{docs/spec\_to\_code\_map.md} 为准查找 tex 章节、代码模块、CLI、artifact 和测试之间的对应关系。实现目录的主轴是：领域对象、硬约束、评分工具、belief、生成网络、oracle、league、真实平台、训练、报告和数据工程。
+
 \chapter{附录 J：符号索引与常用公式}
 \section{符号索引}
 \begin{longtable}{p{0.18\linewidth}p{0.72\linewidth}}

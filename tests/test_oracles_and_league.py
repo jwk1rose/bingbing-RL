@@ -5,19 +5,19 @@ from pathlib import Path
 
 import pytest
 
-from masked_team_league.active import ActivePerceptionScheduler, Query
-from masked_team_league.attack_oracle import AttackOracle, AttackOracleConfig
+from masked_team_league.league.active_perception import ActivePerceptionScheduler, Query
+from masked_team_league.oracles.attack import AttackOracle, AttackOracleConfig
 from masked_team_league.constraints import ConstraintEngine
-from masked_team_league.defense_oracle import DefenseOracle, DefenseOracleConfig
+from masked_team_league.oracles.defense import DefenseOracle, DefenseOracleConfig
 from masked_team_league.generation import GenerationGoal, LegalPlanGenerator
-from masked_team_league.hyperband import HalvingStage
+from masked_team_league.scoring import HalvingStage
 from masked_team_league.league import LeagueManager
-from masked_team_league.mask import MaskSearcher
-from masked_team_league.models import AttackPlan, Team, DefensePlan, canonical_hash, observe_defense
-from masked_team_league.networks import AttackNetInput, LegalMaskedAttackGenerator
+from masked_team_league.oracles.mask_search import MaskSearcher
+from masked_team_league.domain import AttackPlan, Team, DefensePlan, canonical_hash, observe_defense
+from masked_team_league.generation.legal_masked import AttackNetInput, LegalMaskedAttackGenerator
 from masked_team_league.belief import BeliefEngine, BeliefOutput
-from masked_team_league.real_calibration import RealMetaDB, RealMetaRecord
-from masked_team_league.surrogate import SurrogatePrediction
+from masked_team_league.real_platform.calibration import RealMetaDB, RealMetaRecord
+from masked_team_league.scoring import SurrogatePrediction
 
 
 def test_attack_oracle_returns_legal_reproducible_attacks(loadouts, fmt3):

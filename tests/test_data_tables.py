@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from masked_team_league.data_tables import (
+from masked_team_league.data_engineering.core_tables import (
     CORE_TABLE_SCHEMA_VERSION,
     LeagueStrategyTableRecord,
     LoadoutTableRecord,
@@ -15,7 +15,7 @@ from masked_team_league.data_tables import (
 )
 from masked_team_league.generation import LegalPlanGenerator
 from masked_team_league.league import LeagueManager
-from masked_team_league.models import MatchFormat, observe_defense
+from masked_team_league.domain import MatchFormat, observe_defense
 
 
 def test_core_table_records_round_trip_jsonl(tmp_path, loadouts):

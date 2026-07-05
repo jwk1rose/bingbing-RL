@@ -6,9 +6,9 @@ import subprocess
 import sys
 
 from masked_team_league.generation import LegalPlanGenerator
-from masked_team_league.metrics import brier_score
-from masked_team_league.models import observe_defense
-from masked_team_league.real_calibration import (
+from masked_team_league.reporting.metrics import brier_score
+from masked_team_league.domain import observe_defense
+from masked_team_league.real_platform.calibration import (
     RealCalibrationModel,
     RealMetaDB,
     RealMetaRecord,
@@ -513,7 +513,7 @@ def test_build_version_drift_report_detects_shift(loadouts, fmt3):
 
 def test_ingest_real_calibration_script_has_help():
     result = subprocess.run(
-        [sys.executable, "scripts/ingest_real_calibration.py", "--help"],
+        [sys.executable, "-m", "masked_team_league.cli.commands.ingest_real_calibration", "--help"],
         check=False,
         capture_output=True,
         text=True,
@@ -528,7 +528,7 @@ def test_ingest_real_calibration_script_has_help():
 
 def test_build_real_calibration_samples_script_has_help():
     result = subprocess.run(
-        [sys.executable, "scripts/build_real_calibration_samples.py", "--help"],
+        [sys.executable, "-m", "masked_team_league.cli.commands.build_real_calibration_samples", "--help"],
         check=False,
         capture_output=True,
         text=True,
@@ -558,9 +558,7 @@ def test_fit_real_feature_calibration_script_writes_model(tmp_path):
     out_json = tmp_path / "real_feature_calibrator.json"
 
     result = subprocess.run(
-        [
-            sys.executable,
-            "scripts/fit_real_feature_calibration.py",
+        [sys.executable, "-m", "masked_team_league.cli.commands.fit_real_feature_calibration",
             "--samples-jsonl",
             str(samples_path),
             "--out-json",
@@ -581,7 +579,7 @@ def test_fit_real_feature_calibration_script_writes_model(tmp_path):
 
 def test_report_real_calibration_validation_script_has_help():
     result = subprocess.run(
-        [sys.executable, "scripts/report_real_calibration_validation.py", "--help"],
+        [sys.executable, "-m", "masked_team_league.cli.commands.report_real_calibration_validation", "--help"],
         check=False,
         capture_output=True,
         text=True,

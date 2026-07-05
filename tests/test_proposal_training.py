@@ -10,18 +10,18 @@ import pytest
 torch = pytest.importorskip("torch")
 
 from masked_team_league.constraints import ConstraintEngine
-from masked_team_league.checkpointing import CheckpointRegistry
+from masked_team_league.training.checkpoints import CheckpointRegistry
 from masked_team_league.generation import GenerationGoal, LegalPlanGenerator
-from masked_team_league.models import observe_defense
+from masked_team_league.domain import observe_defense
 from masked_team_league.belief import BeliefEngine
-from masked_team_league.proposal_networks import (
+from masked_team_league.generation.proposal_networks import (
     AttackGenerationNetwork,
     DefenseRosterGenerationNetwork,
     GenerationContextEncoder,
     MaskSelectionNetwork,
     ProposalNetworkConfig,
 )
-from masked_team_league.proposal_training import (
+from masked_team_league.generation.proposal_training import (
     MASK_SLOT_FEATURE_NAMES,
     attack_legal_action_mask_fn,
     defense_legal_action_mask_fn,
@@ -537,7 +537,7 @@ def test_generate_defense_roster_candidates_from_proposal_network(loadouts, fmt3
 
 def test_train_attack_proposal_script_has_help():
     result = subprocess.run(
-        [sys.executable, "scripts/train_attack_proposal.py", "--help"],
+        [sys.executable, "-m", "masked_team_league.cli.commands.train_attack_proposal", "--help"],
         check=False,
         capture_output=True,
         text=True,
@@ -553,7 +553,7 @@ def test_train_attack_proposal_script_has_help():
 
 def test_train_defense_proposal_script_has_help():
     result = subprocess.run(
-        [sys.executable, "scripts/train_defense_proposal.py", "--help"],
+        [sys.executable, "-m", "masked_team_league.cli.commands.train_defense_proposal", "--help"],
         check=False,
         capture_output=True,
         text=True,
@@ -568,7 +568,7 @@ def test_train_defense_proposal_script_has_help():
 
 def test_train_mask_selection_script_has_help():
     result = subprocess.run(
-        [sys.executable, "scripts/train_mask_selection.py", "--help"],
+        [sys.executable, "-m", "masked_team_league.cli.commands.train_mask_selection", "--help"],
         check=False,
         capture_output=True,
         text=True,

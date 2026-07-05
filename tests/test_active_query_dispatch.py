@@ -8,12 +8,12 @@ from pathlib import Path
 
 import pytest
 
-from masked_team_league.active_feedback import dispatch_active_real_queries
-from masked_team_league.cache import SimulationCache
+from masked_team_league.league.active_feedback import dispatch_active_real_queries
+from masked_team_league.scoring import SimulationCache
 from masked_team_league.generation import LegalPlanGenerator
-from masked_team_league.models import MatchFormat
-from masked_team_league.real_oracle import OracleBatchEvaluator
-from masked_team_league.resources import load_hero_resource_bundle
+from masked_team_league.domain import MatchFormat
+from masked_team_league.real_platform.oracle import OracleBatchEvaluator
+from masked_team_league.real_platform.resources import load_hero_resource_bundle
 
 
 def _write_heroes(path: Path, count: int = 40) -> None:
@@ -177,7 +177,7 @@ def test_dispatch_active_real_queries_writes_feedback_and_teacher_jsonl(tmp_path
 
 def test_dispatch_active_real_queries_script_has_help() -> None:
     result = subprocess.run(
-        [sys.executable, "scripts/dispatch_active_real_queries.py", "--help"],
+        [sys.executable, "-m", "masked_team_league.cli.commands.dispatch_active_real_queries", "--help"],
         check=False,
         capture_output=True,
         text=True,

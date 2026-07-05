@@ -299,7 +299,7 @@ Required fields:
 - `red_line_violations`: aggregate gate failures such as `report_read_error`, `required_schema_missing`, `red_line_reports_present`, `production_ready_false`, and `clean_report_rate_low`.
 - `production_ready`: true only when every production readiness gate passes.
 
-`schema_counts` includes top-level report schemas and known nested report containers. This is required for `scripts/ingest_real_calibration.py`, which writes a wrapper `real_calibration_report.json` containing one or more nested `real_calibration_ingestion_summary.v1` rows under `ingestions`.
+`schema_counts` includes top-level report schemas and known nested report containers. This is required for `masked_team_league.cli.commands.ingest_real_calibration`, which writes a wrapper `real_calibration_report.json` containing one or more nested `real_calibration_ingestion_summary.v1` rows under `ingestions`.
 
 ## v4 Conformance Validation Report
 
@@ -553,7 +553,7 @@ Required fields:
 
 Schema version: `real_calibration_ingestion_summary.v1`
 
-`scripts/ingest_real_calibration.py` writes these summaries inside a wrapper `real_calibration_report.json` under `ingestions`, alongside aggregate fields such as `db_jsonl`, `total_records`, and optional `drift`. Production readiness counts the nested summary schema when checking required schema versions.
+`masked_team_league.cli.commands.ingest_real_calibration` writes these summaries inside a wrapper `real_calibration_report.json` under `ingestions`, alongside aggregate fields such as `db_jsonl`, `total_records`, and optional `drift`. Production readiness counts the nested summary schema when checking required schema versions.
 
 Required fields:
 

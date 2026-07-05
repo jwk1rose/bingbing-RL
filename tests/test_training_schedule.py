@@ -4,7 +4,7 @@ import json
 import subprocess
 import sys
 
-from masked_team_league.training_schedule import (
+from masked_team_league.training.schedule import (
     RecurringTrainingSchedulerState,
     ScheduledTrainingJob,
     TrainingJobStatus,
@@ -19,7 +19,7 @@ from masked_team_league.training_schedule import (
     run_training_schedule,
     write_training_schedule,
 )
-from masked_team_league.run_metadata import load_run_metadata_manifest
+from masked_team_league.data_engineering.run_metadata import load_run_metadata_manifest
 
 
 def test_build_v4_training_schedule_wires_all_model_jobs(tmp_path):
@@ -60,11 +60,11 @@ def test_build_v4_training_schedule_wires_all_model_jobs(tmp_path):
     ]
     assert schedule.registry_path == str(root / "checkpoint_registry.json")
     assert schedule.jobs[1].depends_on == ("single-team-split-manifest",)
-    assert "scripts/train_single_team_model.py" in schedule.jobs[1].command
+    assert "masked_team_league.cli.commands.train_single_team_model" in schedule.jobs[1].command
     assert "--device" in schedule.jobs[1].command
     job_by_id = {job.job_id: job for job in schedule.jobs}
-    assert "scripts/train_defense_proposal.py" in job_by_id["defense-proposal-train"].command
-    assert "scripts/train_mask_selection.py" in job_by_id["mask-selection-train"].command
+    assert "masked_team_league.cli.commands.train_defense_proposal" in job_by_id["defense-proposal-train"].command
+    assert "masked_team_league.cli.commands.train_mask_selection" in job_by_id["mask-selection-train"].command
     assert job_by_id["mask-selection-select-best"].depends_on == ("mask-selection-train",)
     assert job_by_id["exploiter-effectiveness-report"].depends_on == ("attack-proposal-train",)
     assert job_by_id["defense-anti-meta-effectiveness-report"].depends_on == ("defense-proposal-train",)
@@ -100,7 +100,7 @@ def test_build_v4_training_schedule_wires_real_calibration_ingest_job(tmp_path):
     assert job.depends_on == ("single-team-select-best",)
     assert job.inputs == (str(round_a), str(round_b))
     assert job.outputs == (str(db_jsonl), str(report_json))
-    assert "scripts/ingest_real_calibration.py" in job.command
+    assert "masked_team_league.cli.commands.ingest_real_calibration" in job.command
     assert job.command.count("--round-dir") == 2
     assert "--db-jsonl" in job.command
     assert str(db_jsonl) in job.command
@@ -137,7 +137,7 @@ def test_build_v4_training_schedule_wires_active_real_feedback_into_real_calibra
     assert job.stage == "real_calibration"
     assert job.inputs == (str(feedback_a), str(feedback_b))
     assert job.outputs == (str(db_jsonl), str(report_json))
-    assert "scripts/ingest_real_calibration.py" in job.command
+    assert "masked_team_league.cli.commands.ingest_real_calibration" in job.command
     assert job.command.count("--active-real-feedback-dir") == 2
     assert str(feedback_a) in job.command
     assert str(feedback_b) in job.command
@@ -174,7 +174,7 @@ def test_build_v4_training_schedule_builds_real_calibration_samples_for_validati
     sample_job = job_by_id["real-calibration-sample-build"]
     validation_job = job_by_id["real-calibration-validation-report"]
 
-    assert "scripts/build_real_calibration_samples.py" in sample_job.command
+    assert "masked_team_league.cli.commands.build_real_calibration_samples" in sample_job.command
     assert sample_job.command.count("--round-dir") == 1
     assert sample_job.command.count("--active-real-feedback-dir") == 1
     assert str(round_dir) in sample_job.command
@@ -212,7 +212,7 @@ def test_build_v4_training_schedule_wires_real_calibration_validation_report_job
     assert job.stage == "real_calibration_validation_report"
     assert job.inputs == (str(samples_jsonl), str(calibration_json))
     assert job.outputs == (str(report_json),)
-    assert "scripts/report_real_calibration_validation.py" in job.command
+    assert "masked_team_league.cli.commands.report_real_calibration_validation" in job.command
     assert "--samples-jsonl" in job.command
     assert str(samples_jsonl) in job.command
     assert "--calibration-json" in job.command
@@ -253,7 +253,7 @@ def test_build_v4_training_schedule_builds_belief_ranker_dataset_from_round_arti
         str(root / "datasets" / "belief_ranker" / "belief_ranker_holdout.jsonl"),
         str(root / "datasets" / "belief_ranker" / "split_manifest.json"),
     )
-    assert "scripts/build_belief_ranker_dataset.py" in build_job.command
+    assert "masked_team_league.cli.commands.build_belief_ranker_dataset" in build_job.command
     assert build_job.command.count("--round-dir") == 2
     assert str(round_a) in build_job.command
     assert str(round_b) in build_job.command
@@ -309,7 +309,7 @@ def test_build_v4_training_schedule_wires_exploiter_effectiveness_report_job(tmp
     assert job.depends_on == ("attack-proposal-train",)
     assert job.inputs == (str(attack_teacher),)
     assert job.outputs == (str(report_json),)
-    assert "scripts/report_exploiter_effectiveness.py" in job.command
+    assert "masked_team_league.cli.commands.report_exploiter_effectiveness" in job.command
     assert "--teacher-jsonl" in job.command
     assert str(attack_teacher) in job.command
     assert "--out-report" in job.command
@@ -343,7 +343,7 @@ def test_build_v4_training_schedule_wires_mask_explanation_validation_report_job
     assert job.stage == "mask_explanation_validation_report"
     assert job.inputs == (str(round_a), str(round_b))
     assert job.outputs == (str(report_json),)
-    assert "scripts/report_mask_explanation_validation.py" in job.command
+    assert "masked_team_league.cli.commands.report_mask_explanation_validation" in job.command
     assert job.command.count("--round-dir") == 2
     assert str(round_a) in job.command
     assert str(round_b) in job.command
@@ -377,7 +377,7 @@ def test_build_v4_training_schedule_wires_belief_real_distribution_validation_re
     assert job.stage == "belief_real_distribution_validation_report"
     assert job.inputs == (str(round_a), str(round_b))
     assert job.outputs == (str(report_json),)
-    assert "scripts/report_belief_real_distribution_validation.py" in job.command
+    assert "masked_team_league.cli.commands.report_belief_real_distribution_validation" in job.command
     assert job.command.count("--round-dir") == 2
     assert str(round_a) in job.command
     assert str(round_b) in job.command
@@ -419,7 +419,7 @@ def test_build_v4_training_schedule_wires_defense_anti_meta_effectiveness_report
     assert job.depends_on == ("defense-proposal-train",)
     assert job.inputs == (str(defense_teacher), str(training_root))
     assert job.outputs == (str(report_json),)
-    assert "scripts/report_defense_anti_meta_effectiveness.py" in job.command
+    assert "masked_team_league.cli.commands.report_defense_anti_meta_effectiveness" in job.command
     assert "--teacher-jsonl" in job.command
     assert str(defense_teacher) in job.command
     assert "--training-root" in job.command
@@ -461,7 +461,7 @@ def test_build_v4_training_schedule_wires_learned_exploiter_validation_report_jo
     assert job.stage == "learned_exploiter_validation_report"
     assert job.inputs == (str(selfplay_root), str(training_root))
     assert job.outputs == (str(report_json),)
-    assert "scripts/report_learned_exploiter_validation.py" in job.command
+    assert "masked_team_league.cli.commands.report_learned_exploiter_validation" in job.command
     assert "--selfplay-root" in job.command
     assert str(selfplay_root) in job.command
     assert "--training-root" in job.command
@@ -501,7 +501,7 @@ def test_build_v4_training_schedule_wires_attack_oracle_failure_validation_repor
     assert job.stage == "attack_oracle_failure_validation_report"
     assert job.inputs == (str(oracle_output), str(round_a))
     assert job.outputs == (str(report_json),)
-    assert "scripts/report_attack_oracle_failure_validation.py" in job.command
+    assert "masked_team_league.cli.commands.report_attack_oracle_failure_validation" in job.command
     assert "--oracle-output-json" in job.command
     assert str(oracle_output) in job.command
     assert "--round-dir" in job.command
@@ -537,7 +537,7 @@ def test_build_v4_training_schedule_wires_active_query_feedback_report_job(tmp_p
     assert job.stage == "active_query_feedback_report"
     assert job.inputs == (str(round_a), str(round_b))
     assert job.outputs == (str(report_json),)
-    assert "scripts/report_active_query_feedback.py" in job.command
+    assert "masked_team_league.cli.commands.report_active_query_feedback" in job.command
     assert job.command.count("--round-dir") == 2
     assert str(round_a) in job.command
     assert str(round_b) in job.command
@@ -574,7 +574,7 @@ def test_build_v4_training_schedule_wires_active_real_dispatch_validation_report
     assert job.stage == "active_real_query_dispatch_validation_report"
     assert job.inputs == (str(validation_a), str(validation_b))
     assert job.outputs == (str(report_json),)
-    assert "scripts/report_active_real_query_dispatch_validation.py" in job.command
+    assert "masked_team_league.cli.commands.report_active_real_query_dispatch_validation" in job.command
     assert job.command.count("--validation-json") == 2
     assert str(validation_a) in job.command
     assert str(validation_b) in job.command
@@ -611,7 +611,7 @@ def test_build_v4_training_schedule_wires_data_engineering_validation_report_job
     assert job.stage == "data_engineering_validation_report"
     assert job.inputs == (str(round_a), str(round_b))
     assert job.outputs == (str(report_json),)
-    assert "scripts/report_data_engineering_validation.py" in job.command
+    assert "masked_team_league.cli.commands.report_data_engineering_validation" in job.command
     assert job.command.count("--round-dir") == 2
     assert str(round_a) in job.command
     assert str(round_b) in job.command
@@ -649,7 +649,7 @@ def test_build_v4_training_schedule_wires_underdog_residual_validation_report_jo
     assert job.stage == "underdog_residual_validation_report"
     assert job.inputs == (str(round_a), str(round_b))
     assert job.outputs == (str(report_json),)
-    assert "scripts/report_underdog_residual_validation.py" in job.command
+    assert "masked_team_league.cli.commands.report_underdog_residual_validation" in job.command
     assert job.command.count("--round-dir") == 2
     assert str(round_a) in job.command
     assert str(round_b) in job.command
@@ -687,7 +687,7 @@ def test_build_v4_training_schedule_wires_production_readiness_report_job(tmp_pa
     assert job.stage == "production_readiness_report"
     assert job.inputs == (str(learned_report), str(active_report))
     assert job.outputs == (str(output_report),)
-    assert "scripts/report_production_readiness.py" in job.command
+    assert "masked_team_league.cli.commands.report_production_readiness" in job.command
     assert job.command.count("--report-json") == 2
     assert str(learned_report) in job.command
     assert str(active_report) in job.command
@@ -716,7 +716,7 @@ def test_build_v4_training_schedule_wires_v4_conformance_validation_report_job(t
     job = schedule.jobs[-1]
     assert job.job_id == "v4-conformance-validation-report"
     assert job.stage == "v4_conformance_validation_report"
-    assert "scripts/report_v4_conformance_validation.py" in job.command
+    assert "masked_team_league.cli.commands.report_v4_conformance_validation" in job.command
     assert str(learned_report) in job.command
     assert str(active_report) in job.command
     assert job.inputs == (str(learned_report), str(active_report))
@@ -774,7 +774,7 @@ def test_build_v4_training_schedule_wires_league_selfplay_health_report_job(tmp_
     assert job.stage == "league_selfplay_health_report"
     assert job.inputs == (str(round_a), str(round_b))
     assert job.outputs == (str(report_json),)
-    assert "scripts/report_league_selfplay_health.py" in job.command
+    assert "masked_team_league.cli.commands.report_league_selfplay_health" in job.command
     assert job.command.count("--round-dir") == 2
     assert str(round_a) in job.command
     assert str(round_b) in job.command
@@ -1348,13 +1348,13 @@ def test_scheduler_red_line_check_reads_external_report_lists(tmp_path):
 
 def test_training_schedule_clis_expose_exploiter_and_mask_validation_args():
     schedule_help = subprocess.run(
-        [sys.executable, "scripts/run_training_schedule.py", "--help"],
+        [sys.executable, "-m", "masked_team_league.cli.commands.run_training_schedule", "--help"],
         check=False,
         capture_output=True,
         text=True,
     )
     daemon_help = subprocess.run(
-        [sys.executable, "scripts/run_training_scheduler_daemon.py", "--help"],
+        [sys.executable, "-m", "masked_team_league.cli.commands.run_training_scheduler_daemon", "--help"],
         check=False,
         capture_output=True,
         text=True,
@@ -1493,7 +1493,7 @@ def test_recurring_training_scheduler_stops_on_failed_job(tmp_path):
 
 def test_run_training_schedule_script_has_help():
     result = subprocess.run(
-        [sys.executable, "scripts/run_training_schedule.py", "--help"],
+        [sys.executable, "-m", "masked_team_league.cli.commands.run_training_schedule", "--help"],
         check=False,
         capture_output=True,
         text=True,
@@ -1516,7 +1516,7 @@ def test_run_training_schedule_script_has_help():
 
 def test_run_training_scheduler_daemon_script_has_help():
     result = subprocess.run(
-        [sys.executable, "scripts/run_training_scheduler_daemon.py", "--help"],
+        [sys.executable, "-m", "masked_team_league.cli.commands.run_training_scheduler_daemon", "--help"],
         check=False,
         capture_output=True,
         text=True,

@@ -5,21 +5,21 @@ from pathlib import Path
 import subprocess
 import sys
 
-from masked_team_league.belief_ranker import (
+from masked_team_league.belief.ranker import (
     BeliefRankerTrainingSample,
     TorchBeliefRankerAdapter,
     evaluate_belief_ranker,
     save_belief_ranker_checkpoint,
     train_belief_ranker,
 )
-from masked_team_league.cache import SimulationCache
-from masked_team_league.data_tables import CORE_TABLE_SCHEMA_VERSION, load_table_jsonl
+from masked_team_league.scoring import SimulationCache
+from masked_team_league.data_engineering.core_tables import CORE_TABLE_SCHEMA_VERSION, load_table_jsonl
 from masked_team_league.generation import LegalPlanGenerator
-from masked_team_league.models import MatchFormat, Team, observe_defense
-from masked_team_league.real_oracle import OracleBatchEvaluator
-from masked_team_league.resources import load_hero_resource_bundle
-from masked_team_league.round_runner import LeagueRoundConfig, LeagueRoundRunner
-from masked_team_league.run_metadata import load_run_metadata_manifest
+from masked_team_league.domain import MatchFormat, Team, observe_defense
+from masked_team_league.real_platform.oracle import OracleBatchEvaluator
+from masked_team_league.real_platform.resources import load_hero_resource_bundle
+from masked_team_league.league.round_runner import LeagueRoundConfig, LeagueRoundRunner
+from masked_team_league.data_engineering.run_metadata import load_run_metadata_manifest
 
 
 def _write_heroes(path: Path, count: int = 40) -> None:
@@ -357,7 +357,7 @@ def test_league_round_runner_selects_belief_ranker_from_registry(tmp_path: Path)
 
 def test_run_league_round_script_has_help() -> None:
     result = subprocess.run(
-        [sys.executable, "scripts/run_league_round.py", "--help"],
+        [sys.executable, "-m", "masked_team_league.cli.commands.run_league_round", "--help"],
         check=False,
         capture_output=True,
         text=True,

@@ -6,13 +6,13 @@ import subprocess
 import sys
 from pathlib import Path
 
-from masked_team_league.cache import SimulationCache
+from masked_team_league.scoring import SimulationCache
 from masked_team_league.generation import LegalPlanGenerator
-from masked_team_league.models import MatchFormat
-from masked_team_league.real_oracle import OracleBatchEvaluator
-from masked_team_league.resources import load_hero_resource_bundle
-from masked_team_league.round_runner import LeagueRoundConfig, LeagueRoundRunner
-from masked_team_league.selfplay import (
+from masked_team_league.domain import MatchFormat
+from masked_team_league.real_platform.oracle import OracleBatchEvaluator
+from masked_team_league.real_platform.resources import load_hero_resource_bundle
+from masked_team_league.league.round_runner import LeagueRoundConfig, LeagueRoundRunner
+from masked_team_league.league.selfplay import (
     SelfPlayOrchestrator,
     SelfPlayOrchestratorConfig,
     build_attack_teacher_jsonl_from_round,
@@ -308,7 +308,7 @@ def test_selfplay_orchestrator_dispatches_real_queries_into_teacher_feedback(tmp
 
 def test_run_selfplay_orchestrator_script_has_help() -> None:
     result = subprocess.run(
-        [sys.executable, "scripts/run_selfplay_orchestrator.py", "--help"],
+        [sys.executable, "-m", "masked_team_league.cli.commands.run_selfplay_orchestrator", "--help"],
         check=False,
         capture_output=True,
         text=True,

@@ -5,7 +5,7 @@
 - `schema_version`: always `core_tables.v1`.
 - `table`: stable table name.
 
-Rows are written as compact JSONL. Each table can be appended independently and later loaded by `masked_team_league.data_tables.load_table_jsonl()`.
+Rows are written as compact JSONL. Each table can be appended independently and later loaded by `masked_team_league.data_engineering.load_table_jsonl()`.
 
 ## LoadoutTable
 

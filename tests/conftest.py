@@ -1,8 +1,17 @@
 from __future__ import annotations
 
+import os
+from pathlib import Path
+
 import pytest
 
-from masked_team_league.models import HeroRecord, Loadout, MatchFormat
+from masked_team_league.domain import HeroRecord, Loadout, MatchFormat
+
+
+ROOT = Path(__file__).resolve().parents[1]
+SRC = str(ROOT / "src")
+PYTHONPATH = os.environ.get("PYTHONPATH")
+os.environ["PYTHONPATH"] = SRC if not PYTHONPATH else f"{SRC}{os.pathsep}{PYTHONPATH}"
 
 
 @pytest.fixture

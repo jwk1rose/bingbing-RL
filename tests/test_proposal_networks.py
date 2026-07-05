@@ -6,8 +6,8 @@ import pytest
 
 torch = pytest.importorskip("torch")
 
-from masked_team_league.models import MatchFormat
-from masked_team_league.proposal_networks import (
+from masked_team_league.domain import MatchFormat
+from masked_team_league.generation.proposal_networks import (
     AttackGenerationNetwork,
     DefenseRosterGenerationNetwork,
     GenerationContextEncoder,

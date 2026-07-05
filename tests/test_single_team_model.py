@@ -6,8 +6,8 @@ import pytest
 
 torch = pytest.importorskip("torch")
 
-from masked_team_league.models import Team
-from masked_team_league.single_team_model import (
+from masked_team_league.domain import Team
+from masked_team_league.training.single_team_model import (
     LoadoutVocab,
     SingleTeamEnsembleScorer,
     SingleTeamWinrateModel,

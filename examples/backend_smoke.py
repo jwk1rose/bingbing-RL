@@ -12,10 +12,10 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from masked_team_league.backend import OracleBackendClient, OracleBackendSimulator, is_oracle_backend_ready
+from masked_team_league.real_platform.backend import OracleBackendClient, OracleBackendSimulator, is_oracle_backend_ready
 from masked_team_league.generation import LegalPlanGenerator
-from masked_team_league.models import MatchFormat
-from masked_team_league.resources import load_hero_resource_bundle
+from masked_team_league.domain import MatchFormat
+from masked_team_league.real_platform.resources import load_hero_resource_bundle
 
 
 def build_parser() -> argparse.ArgumentParser:

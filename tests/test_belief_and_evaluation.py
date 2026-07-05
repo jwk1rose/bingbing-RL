@@ -4,9 +4,9 @@ from dataclasses import replace
 
 from masked_team_league.belief import BeliefEngine
 from masked_team_league.constraints import ConstraintEngine
-from masked_team_league.evaluation import match_win_probability
-from masked_team_league.models import DefensePlan, Team, observe_defense
-from masked_team_league.surrogate import HeuristicSurrogateScorer
+from masked_team_league.scoring import match_win_probability
+from masked_team_league.domain import DefensePlan, Team, observe_defense
+from masked_team_league.scoring import HeuristicSurrogateScorer
 
 
 def test_match_win_probability_bo3_and_bo5():

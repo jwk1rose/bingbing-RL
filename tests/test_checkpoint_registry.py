@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from masked_team_league.checkpointing import CheckpointRegistry, ModelCheckpointRecord
+from masked_team_league.training.checkpoints import CheckpointRegistry, ModelCheckpointRecord
 
 
 def test_checkpoint_registry_persists_and_selects_best_metric(tmp_path):

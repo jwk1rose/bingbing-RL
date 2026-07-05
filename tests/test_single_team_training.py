@@ -8,8 +8,8 @@ import pytest
 
 torch = pytest.importorskip("torch")
 
-from masked_team_league.models import Team
-from masked_team_league.single_team_model import LoadoutVocab, SingleTeamWinrateModel, SingleTeamWinrateModelConfig
+from masked_team_league.domain import Team
+from masked_team_league.training.single_team_model import LoadoutVocab, SingleTeamWinrateModel, SingleTeamWinrateModelConfig
 from masked_team_league.training import (
     SingleTeamMatchupSample,
     build_holdout_calibration_report,
@@ -106,7 +106,7 @@ def test_build_holdout_calibration_report_summarizes_improvement():
 
 def test_train_single_team_model_script_has_help():
     result = subprocess.run(
-        [sys.executable, "scripts/train_single_team_model.py", "--help"],
+        [sys.executable, "-m", "masked_team_league.cli.commands.train_single_team_model", "--help"],
         check=False,
         capture_output=True,
         text=True,

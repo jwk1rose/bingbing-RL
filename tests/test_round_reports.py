@@ -6,7 +6,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from masked_team_league.reports import (
+from masked_team_league.reporting.reports import (
     build_active_query_feedback_report,
     build_active_real_query_dispatch_validation_report,
     build_attack_oracle_failure_validation_report,
@@ -369,7 +369,7 @@ def test_build_underdog_residual_validation_report_flags_missing_and_weak_covera
 
 def test_report_data_engineering_validation_script_has_help():
     result = subprocess.run(
-        [sys.executable, "scripts/report_data_engineering_validation.py", "--help"],
+        [sys.executable, "-m", "masked_team_league.cli.commands.report_data_engineering_validation", "--help"],
         check=False,
         capture_output=True,
         text=True,
@@ -382,7 +382,7 @@ def test_report_data_engineering_validation_script_has_help():
 
 def test_report_underdog_residual_validation_script_has_help():
     result = subprocess.run(
-        [sys.executable, "scripts/report_underdog_residual_validation.py", "--help"],
+        [sys.executable, "-m", "masked_team_league.cli.commands.report_underdog_residual_validation", "--help"],
         check=False,
         capture_output=True,
         text=True,
@@ -535,7 +535,7 @@ def test_build_league_selfplay_health_report_flags_pool_collapse_and_missing_pay
 
 def test_report_league_selfplay_health_script_has_help():
     result = subprocess.run(
-        [sys.executable, "scripts/report_league_selfplay_health.py", "--help"],
+        [sys.executable, "-m", "masked_team_league.cli.commands.report_league_selfplay_health", "--help"],
         check=False,
         capture_output=True,
         text=True,
@@ -642,7 +642,7 @@ def test_build_active_real_query_dispatch_validation_report_flags_failed_feedbac
 
 def test_report_active_real_query_dispatch_validation_script_has_help():
     result = subprocess.run(
-        [sys.executable, "scripts/report_active_real_query_dispatch_validation.py", "--help"],
+        [sys.executable, "-m", "masked_team_league.cli.commands.report_active_real_query_dispatch_validation", "--help"],
         check=False,
         capture_output=True,
         text=True,
@@ -754,7 +754,7 @@ def test_build_active_query_feedback_report_flags_missing_feedback_and_real_quer
 
 def test_report_active_query_feedback_script_has_help():
     result = subprocess.run(
-        [sys.executable, "scripts/report_active_query_feedback.py", "--help"],
+        [sys.executable, "-m", "masked_team_league.cli.commands.report_active_query_feedback", "--help"],
         check=False,
         capture_output=True,
         text=True,
@@ -786,9 +786,7 @@ def test_report_active_query_feedback_script_merges_oracle_result_error_rate(tmp
     _write_jsonl(round_b / "oracle_results.jsonl", [{"status": "completed"}, {"status": "completed"}])
 
     result = subprocess.run(
-        [
-            sys.executable,
-            "scripts/report_active_query_feedback.py",
+        [sys.executable, "-m", "masked_team_league.cli.commands.report_active_query_feedback",
             "--round-dir",
             str(round_a),
             "--round-dir",
@@ -891,7 +889,7 @@ def test_build_mask_explanation_validation_report_flags_missing_or_degenerate_ma
 
 def test_report_mask_explanation_validation_script_has_help():
     result = subprocess.run(
-        [sys.executable, "scripts/report_mask_explanation_validation.py", "--help"],
+        [sys.executable, "-m", "masked_team_league.cli.commands.report_mask_explanation_validation", "--help"],
         check=False,
         capture_output=True,
         text=True,
@@ -1005,7 +1003,7 @@ def test_build_belief_real_distribution_validation_report_flags_missing_real_met
 
 def test_report_belief_real_distribution_validation_script_has_help():
     result = subprocess.run(
-        [sys.executable, "scripts/report_belief_real_distribution_validation.py", "--help"],
+        [sys.executable, "-m", "masked_team_league.cli.commands.report_belief_real_distribution_validation", "--help"],
         check=False,
         capture_output=True,
         text=True,
@@ -1193,7 +1191,7 @@ def test_build_exploiter_effectiveness_report_flags_non_improving_round_trend(tm
 
 def test_report_exploiter_effectiveness_script_has_help():
     result = subprocess.run(
-        [sys.executable, "scripts/report_exploiter_effectiveness.py", "--help"],
+        [sys.executable, "-m", "masked_team_league.cli.commands.report_exploiter_effectiveness", "--help"],
         check=False,
         capture_output=True,
         text=True,
@@ -1314,7 +1312,7 @@ def test_build_defense_anti_meta_effectiveness_report_tracks_round_trend_from_tr
 
 def test_report_defense_anti_meta_effectiveness_script_has_help():
     result = subprocess.run(
-        [sys.executable, "scripts/report_defense_anti_meta_effectiveness.py", "--help"],
+        [sys.executable, "-m", "masked_team_league.cli.commands.report_defense_anti_meta_effectiveness", "--help"],
         check=False,
         capture_output=True,
         text=True,
@@ -1470,7 +1468,7 @@ def test_build_learned_exploiter_validation_report_flags_missing_scale_and_check
 
 def test_report_learned_exploiter_validation_script_has_help():
     result = subprocess.run(
-        [sys.executable, "scripts/report_learned_exploiter_validation.py", "--help"],
+        [sys.executable, "-m", "masked_team_league.cli.commands.report_learned_exploiter_validation", "--help"],
         check=False,
         capture_output=True,
         text=True,
@@ -1624,7 +1622,7 @@ def test_build_production_readiness_report_flags_missing_bad_and_red_reports(tmp
 
 def test_report_production_readiness_script_has_help():
     result = subprocess.run(
-        [sys.executable, "scripts/report_production_readiness.py", "--help"],
+        [sys.executable, "-m", "masked_team_league.cli.commands.report_production_readiness", "--help"],
         check=False,
         capture_output=True,
         text=True,
@@ -1721,7 +1719,7 @@ def test_build_v4_conformance_validation_report_flags_missing_and_red_evidence(t
 
 def test_report_v4_conformance_validation_script_has_help():
     result = subprocess.run(
-        [sys.executable, "scripts/report_v4_conformance_validation.py", "--help"],
+        [sys.executable, "-m", "masked_team_league.cli.commands.report_v4_conformance_validation", "--help"],
         check=False,
         capture_output=True,
         text=True,
@@ -1745,9 +1743,7 @@ def test_report_v4_conformance_validation_script_reports_root_includes_plan_json
     out_report = tmp_path / "v4_conformance_validation_report.json"
 
     result = subprocess.run(
-        [
-            sys.executable,
-            "scripts/report_v4_conformance_validation.py",
+        [sys.executable, "-m", "masked_team_league.cli.commands.report_v4_conformance_validation",
             "--reports-root",
             str(tmp_path),
             "--out-report",
@@ -1850,7 +1846,7 @@ def test_build_attack_oracle_failure_validation_report_flags_missing_failure_ann
 
 def test_report_attack_oracle_failure_validation_script_has_help():
     result = subprocess.run(
-        [sys.executable, "scripts/report_attack_oracle_failure_validation.py", "--help"],
+        [sys.executable, "-m", "masked_team_league.cli.commands.report_attack_oracle_failure_validation", "--help"],
         check=False,
         capture_output=True,
         text=True,
@@ -1864,7 +1860,7 @@ def test_report_attack_oracle_failure_validation_script_has_help():
 
 def test_report_league_round_script_has_help():
     result = subprocess.run(
-        [sys.executable, "scripts/report_league_round.py", "--help"],
+        [sys.executable, "-m", "masked_team_league.cli.commands.report_league_round", "--help"],
         check=False,
         capture_output=True,
         text=True,

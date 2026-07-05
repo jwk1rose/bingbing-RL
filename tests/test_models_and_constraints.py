@@ -4,12 +4,12 @@ import builtins
 
 import pytest
 
-import masked_team_league.cache as cache_module
-import masked_team_league.models as model_module
-from masked_team_league.cache import MatchupCacheKey
+import masked_team_league.scoring.cache as cache_module
+import masked_team_league.domain.hashing as model_module
+from masked_team_league.scoring import MatchupCacheKey
 from masked_team_league.constraints import ConstraintEngine
 from masked_team_league.generation import GenerationGoal, LegalPlanGenerator
-from masked_team_league.models import AttackPlan, DefensePlan, HeroRecord, Loadout, MatchFormat, Team, observe_defense
+from masked_team_league.domain import AttackPlan, DefensePlan, HeroRecord, Loadout, MatchFormat, Team, observe_defense
 
 
 def test_loadout_requires_unique_equip_star(heroes):

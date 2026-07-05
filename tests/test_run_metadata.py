@@ -3,8 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from masked_team_league.models import ResultMetadata
-from masked_team_league.run_metadata import (
+from masked_team_league.domain import ResultMetadata
+from masked_team_league.data_engineering.run_metadata import (
     RUN_METADATA_SCHEMA_VERSION,
     RunArtifactRef,
     RunMetadataManifest,

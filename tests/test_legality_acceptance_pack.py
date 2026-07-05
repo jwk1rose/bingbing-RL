@@ -5,7 +5,7 @@ from pathlib import Path
 
 from masked_team_league.constraints import ConstraintEngine
 from masked_team_league.generation import LegalPlanGenerator
-from masked_team_league.models import AttackPlan, DefensePlan, Loadout, MatchFormat, Team
+from masked_team_league.domain import AttackPlan, DefensePlan, Loadout, MatchFormat, Team
 
 
 def test_acceptance_pack_accepts_twenty_legal_attacks_and_twenty_legal_defenses(loadouts):
