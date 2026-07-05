@@ -23,6 +23,8 @@ POSITION_BUCKET_BASE = {
     "": 3000.0,
 }
 
+DEFAULT_ORACLE_EXCLUDED_HERO_IDS = (45, 75)
+
 
 @dataclass(frozen=True)
 class HeroResource:
@@ -122,6 +124,7 @@ def load_hero_resource_bundle(
     hero_catalog_path: Path,
     *,
     hero_ids: Iterable[int] | None = None,
+    excluded_hero_ids: Iterable[int] | None = None,
     unique_equip_star: int = 5,
     unique_legend_equip_ids: Iterable[int] | None = None,
     runtime_rules: RuntimeResourceRules | None = None,
@@ -132,6 +135,7 @@ def load_hero_resource_bundle(
     if not isinstance(records, list):
         raise ValueError("hero catalog must be a list or an object with a heroes list")
     selected = {int(hero_id) for hero_id in hero_ids} if hero_ids is not None else None
+    excluded = {int(hero_id) for hero_id in excluded_hero_ids or ()}
     unique_source = unique_legend_equip_ids
     if unique_source is None and runtime_rules is not None:
         unique_source = runtime_rules.unique_legend_equip_ids
@@ -144,6 +148,8 @@ def load_hero_resource_bundle(
             continue
         hero_id = int(item["id"])
         if selected is not None and hero_id not in selected:
+            continue
+        if hero_id in excluded:
             continue
         equip_ids = tuple(int(value) for value in item.get("equipIds", []) if int(value) > 0)
         default_unique = _default_unique_equip_id(item, equip_ids, unique_ids)

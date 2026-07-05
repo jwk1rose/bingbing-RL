@@ -33,7 +33,12 @@ class MatchupCacheKey:
         )
 
     def hash(self) -> str:
-        return canonical_hash(self)
+        cached = getattr(self, "_canonical_hash_cache", None)
+        if cached is not None:
+            return str(cached)
+        value = canonical_hash(self)
+        object.__setattr__(self, "_canonical_hash_cache", value)
+        return value
 
 
 @dataclass(frozen=True)

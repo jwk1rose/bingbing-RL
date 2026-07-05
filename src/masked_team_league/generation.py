@@ -15,10 +15,17 @@ class GenerationGoal:
 
 
 class LegalPlanGenerator:
-    def __init__(self, loadout_pool: tuple[Loadout, ...], *, seed: int = 0) -> None:
+    def __init__(self, loadout_pool: tuple[Loadout, ...], *, seed: int = 0, use_future_feasibility: bool = True) -> None:
         self.loadout_pool = tuple(loadout_pool)
         self.rng = random.Random(seed)
         self.engine = ConstraintEngine(self.loadout_pool)
+        self.use_future_feasibility = bool(use_future_feasibility)
+        self._cost_sorted_loadout_pool = tuple(
+            sorted(
+                self.loadout_pool,
+                key=lambda item: (item.cost, item.standing_rank, item.hero_id, item.unique_equip_id or -1),
+            )
+        )
 
     def generate_attack_plan(
         self,
@@ -99,32 +106,46 @@ class LegalPlanGenerator:
             used_equips: set[int] = set()
             teams: list[Team] = []
             total_cost = 0.0
+            total_slots = match_format.n_teams * match_format.team_size
             failed = False
             for _team_idx in range(match_format.n_teams):
                 slots: list[Loadout] = []
                 for slot_idx in range(match_format.team_size):
                     remaining_after = match_format.team_size - slot_idx - 1
-                    pool = list(self.loadout_pool)
-                    self.rng.shuffle(pool)
-                    legal = [
-                        loadout
-                        for loadout in pool
-                        if self.engine.future_feasible(
-                            loadout,
-                            current_team_slots=tuple(slots),
-                            remaining_team_slots_after_candidate=remaining_after,
-                            used_hero_ids=frozenset(used_heroes),
-                            used_unique_equip_ids=frozenset(used_equips),
-                            pool=self.loadout_pool,
-                        )
-                    ]
+                    remaining_total_after = total_slots - (len(teams) * match_format.team_size + slot_idx + 1)
+                    mask = self.engine.legal_action_mask(
+                        self.loadout_pool,
+                        current_team_slots=tuple(slots),
+                        remaining_team_slots_after_candidate=remaining_after,
+                        used_hero_ids=frozenset(used_heroes),
+                        used_unique_equip_ids=frozenset(used_equips),
+                        use_future_feasibility=self.use_future_feasibility,
+                    )
+                    legal = [loadout for loadout, allowed in zip(self.loadout_pool, mask) if allowed]
                     if reference_cost is not None and goal.target_power_ratio < 1.0:
                         budget = goal.target_power_ratio * reference_cost
-                        legal = [loadout for loadout in legal if total_cost + loadout.cost <= budget]
+                        legal = [
+                            loadout
+                            for loadout in legal
+                            if self._budget_future_feasible(
+                                loadout,
+                                total_cost=total_cost,
+                                budget=budget,
+                                remaining_total_slots_after_candidate=remaining_total_after,
+                                used_hero_ids=used_heroes,
+                                used_unique_equip_ids=used_equips,
+                            )
+                        ]
+                        legal = self._budget_choice_pool(
+                            legal,
+                            total_cost=total_cost,
+                            budget=budget,
+                            remaining_total_slots_after_candidate=remaining_total_after,
+                        )
                     if not legal:
                         failed = True
                         break
-                    chosen = legal[0]
+                    chosen = self.rng.choice(legal)
                     slots.append(chosen)
                     used_heroes.add(chosen.hero_id)
                     if chosen.unique_equip_id is not None:
@@ -139,3 +160,61 @@ class LegalPlanGenerator:
             if not self.engine._check_roster(result):
                 return result
         raise ValueError("could not generate a legal plan from the provided loadout pool")
+
+    def _budget_future_feasible(
+        self,
+        candidate: Loadout,
+        *,
+        total_cost: float,
+        budget: float,
+        remaining_total_slots_after_candidate: int,
+        used_hero_ids: set[int],
+        used_unique_equip_ids: set[int],
+    ) -> bool:
+        new_total = total_cost + candidate.cost
+        if new_total > budget:
+            return False
+        if remaining_total_slots_after_candidate <= 0:
+            return True
+        heroes = set(used_hero_ids)
+        equips = set(used_unique_equip_ids)
+        heroes.add(candidate.hero_id)
+        if candidate.unique_equip_id is not None:
+            equips.add(candidate.unique_equip_id)
+        cheapest_remaining = 0.0
+        count = 0
+        for loadout in self._cost_sorted_loadout_pool:
+            if loadout.hero_id in heroes:
+                continue
+            if loadout.unique_equip_id is not None and loadout.unique_equip_id in equips:
+                continue
+            heroes.add(loadout.hero_id)
+            if loadout.unique_equip_id is not None:
+                equips.add(loadout.unique_equip_id)
+            cheapest_remaining += loadout.cost
+            count += 1
+            if count >= remaining_total_slots_after_candidate:
+                return new_total + cheapest_remaining <= budget
+        return False
+
+    def _budget_choice_pool(
+        self,
+        legal: list[Loadout],
+        *,
+        total_cost: float,
+        budget: float,
+        remaining_total_slots_after_candidate: int,
+    ) -> list[Loadout]:
+        if not legal:
+            return legal
+        remaining_slots_including_candidate = remaining_total_slots_after_candidate + 1
+        if remaining_slots_including_candidate <= 1:
+            return legal
+        target_per_slot = max((budget - total_cost) / remaining_slots_including_candidate, 0.0)
+        ceiling = target_per_slot * 1.35
+        affordable = [loadout for loadout in legal if loadout.cost <= ceiling]
+        ordered = sorted(
+            affordable or legal,
+            key=lambda item: (item.cost, item.standing_rank, item.hero_id, item.unique_equip_id or -1),
+        )
+        return ordered[: max(1, min(len(ordered), max(4, len(ordered) // 3)))]

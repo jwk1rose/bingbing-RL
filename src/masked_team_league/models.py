@@ -31,6 +31,15 @@ def canonical_hash(obj: Any) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
+def _cached_canonical_hash(obj: Any, attr_name: str = "_canonical_hash_cache") -> str:
+    cached = getattr(obj, attr_name, None)
+    if cached is not None:
+        return str(cached)
+    value = canonical_hash(obj)
+    object.__setattr__(obj, attr_name, value)
+    return value
+
+
 @dataclass(frozen=True)
 class MatchFormat:
     n_teams: int
@@ -176,7 +185,7 @@ class Team:
         return sum(loadout.final_power for loadout in self.slots)
 
     def hash(self) -> str:
-        return canonical_hash(self)
+        return _cached_canonical_hash(self)
 
 
 @dataclass(frozen=True)
@@ -195,7 +204,7 @@ class AttackPlan:
             raise ValueError("AttackPlan team count does not match format")
 
     def hash(self) -> str:
-        return canonical_hash(self)
+        return _cached_canonical_hash(self)
 
 
 @dataclass(frozen=True)
@@ -220,10 +229,15 @@ class DefensePlan:
             raise ValueError("each mask row must have exactly 5 entries")
 
     def roster_hash(self) -> str:
-        return canonical_hash((self.format, self.teams, self.version, self.season, self.rank_segment))
+        cached = getattr(self, "_roster_hash_cache", None)
+        if cached is not None:
+            return str(cached)
+        value = canonical_hash((self.format, self.teams, self.version, self.season, self.rank_segment))
+        object.__setattr__(self, "_roster_hash_cache", value)
+        return value
 
     def hash(self) -> str:
-        return canonical_hash(self)
+        return _cached_canonical_hash(self)
 
 
 @dataclass(frozen=True)
@@ -279,7 +293,7 @@ class Observation:
             raise ValueError("each observation row must have exactly 5 slots")
 
     def hash(self) -> str:
-        return canonical_hash(self)
+        return _cached_canonical_hash(self)
 
 
 @dataclass(frozen=True)

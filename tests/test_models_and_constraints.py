@@ -1,10 +1,15 @@
 from __future__ import annotations
 
+import builtins
+
 import pytest
 
+import masked_team_league.cache as cache_module
+import masked_team_league.models as model_module
+from masked_team_league.cache import MatchupCacheKey
 from masked_team_league.constraints import ConstraintEngine
-from masked_team_league.generation import LegalPlanGenerator
-from masked_team_league.models import DefensePlan, Loadout, Team, observe_defense
+from masked_team_league.generation import GenerationGoal, LegalPlanGenerator
+from masked_team_league.models import AttackPlan, DefensePlan, HeroRecord, Loadout, MatchFormat, Team, observe_defense
 
 
 def test_loadout_requires_unique_equip_star(heroes):
@@ -60,6 +65,142 @@ def test_generator_produces_many_legal_plans(loadouts, fmt3):
     for _ in range(20):
         attack = generator.generate_attack_plan(fmt3)
         assert engine.is_legal_attack(attack)
+
+
+def test_legal_action_mask_can_ablate_future_feasibility(loadouts):
+    engine = ConstraintEngine(loadouts)
+    high_rank_candidate_index = len(loadouts) - 1
+
+    strict = engine.legal_action_mask(
+        loadouts,
+        current_team_slots=(),
+        remaining_team_slots_after_candidate=4,
+        used_hero_ids=frozenset(),
+        used_unique_equip_ids=frozenset(),
+    )
+    ablated = engine.legal_action_mask(
+        loadouts,
+        current_team_slots=(),
+        remaining_team_slots_after_candidate=4,
+        used_hero_ids=frozenset(),
+        used_unique_equip_ids=frozenset(),
+        use_future_feasibility=False,
+    )
+
+    assert not strict[high_rank_candidate_index]
+    assert ablated[high_rank_candidate_index]
+
+
+def test_legal_action_mask_reuses_sorted_pool(loadouts):
+    engine = ConstraintEngine(loadouts)
+    sorted_calls = 0
+    real_sorted = builtins.sorted
+
+    def counted_sorted(*args, **kwargs):
+        nonlocal sorted_calls
+        sorted_calls += 1
+        return real_sorted(*args, **kwargs)
+
+    original_sorted = builtins.sorted
+    builtins.sorted = counted_sorted
+    try:
+        for _ in range(3):
+            mask = engine.legal_action_mask(
+                loadouts,
+                current_team_slots=(),
+                remaining_team_slots_after_candidate=4,
+                used_hero_ids=frozenset(),
+                used_unique_equip_ids=frozenset(),
+            )
+            assert any(mask)
+    finally:
+        builtins.sorted = original_sorted
+
+    assert sorted_calls == 0
+
+
+def test_team_and_plan_hashes_cache_canonical_hash(loadouts, fmt3, monkeypatch):
+    calls = 0
+    real_hash = model_module.canonical_hash
+
+    def counted_hash(value):
+        nonlocal calls
+        calls += 1
+        return real_hash(value)
+
+    monkeypatch.setattr(model_module, "canonical_hash", counted_hash)
+    team = Team(loadouts[0:5])
+    attack = AttackPlan(fmt3, (team, Team(loadouts[5:10]), Team(loadouts[10:15])), "test")
+    defense = DefensePlan(fmt3, attack.teams, ((0, 0, 0, 0, 0),) * 3, "test")
+
+    assert team.hash() == team.hash()
+    assert attack.hash() == attack.hash()
+    assert defense.hash() == defense.hash()
+
+    assert calls == 3
+
+
+def test_matchup_cache_key_hash_caches_canonical_hash(loadouts, monkeypatch):
+    calls = 0
+    real_hash = cache_module.canonical_hash
+
+    def counted_hash(value):
+        nonlocal calls
+        calls += 1
+        return real_hash(value)
+
+    attack = Team(loadouts[0:5])
+    defense = Team(loadouts[5:10])
+    key = MatchupCacheKey.from_teams(attack, defense)
+    monkeypatch.setattr(cache_module, "canonical_hash", counted_hash)
+
+    assert key.hash() == key.hash()
+
+    assert calls == 1
+
+
+def test_budgeted_attack_candidate_generation_avoids_random_retry_spins(monkeypatch):
+    heroes = tuple(
+        HeroRecord.from_mapping(
+            hero_id=idx,
+            name=f"budget-hero-{idx}",
+            standing_rank=float(idx),
+            standing_bucket="test",
+            base_power=1000.0 + idx * 30.0,
+            default_unique_equip_id=1000 + idx,
+        )
+        for idx in range(1, 41)
+    )
+    loadouts = tuple(
+        Loadout.from_hero(
+            hero,
+            unique_equip_star=3 + hero.hero_id % 3,
+            final_power=hero.base_power + (3 + hero.hero_id % 3) * 20.0,
+        )
+        for hero in heroes
+    )
+    fmt = MatchFormat(3)
+    cheapest_legal_roster_cost = sum(loadout.cost for loadout in sorted(loadouts, key=lambda item: item.cost)[:15])
+    reference_cost = cheapest_legal_roster_cost * 1.2 / 0.9
+    mask_calls = 0
+    real_mask = ConstraintEngine.legal_action_mask
+
+    def counted_mask(self, *args, **kwargs):
+        nonlocal mask_calls
+        mask_calls += 1
+        return real_mask(self, *args, **kwargs)
+
+    monkeypatch.setattr(ConstraintEngine, "legal_action_mask", counted_mask)
+
+    candidates = LegalPlanGenerator(loadouts, seed=7).generate_attack_candidates(
+        fmt,
+        count=3,
+        goal=GenerationGoal(target_power_ratio=0.9),
+        reference_cost=reference_cost,
+    )
+
+    assert len(candidates) == 3
+    assert mask_calls < 1_000
 
 
 def test_twenty_illegal_inputs_are_rejected(loadouts, fmt3):

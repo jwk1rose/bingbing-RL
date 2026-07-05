@@ -2,15 +2,42 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import math
+from typing import Any
 from typing import Iterable
 
 from .models import AttackPlan, DefensePlan, Loadout, Observation, Slot, Team
+
+
+LEGAL_DIAGNOSTIC_SCHEMA_VERSION = "legality_diagnostics.v1"
+
+
+@dataclass(frozen=True)
+class LegalDiagnostic:
+    code: str
+    message: str
+    path: tuple[str, ...] = ()
+    severity: str = "error"
+    details: tuple[tuple[str, str], ...] = ()
+
+    def to_json_dict(self) -> dict[str, Any]:
+        return {
+            "code": self.code,
+            "message": self.message,
+            "path": list(self.path),
+            "severity": self.severity,
+            "details": {key: value for key, value in self.details},
+        }
 
 
 @dataclass(frozen=True)
 class LegalReport:
     legal: bool
     reasons: tuple[str, ...] = ()
+    diagnostics: tuple[LegalDiagnostic, ...] = ()
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "reasons", tuple(str(reason) for reason in self.reasons))
+        object.__setattr__(self, "diagnostics", tuple(self.diagnostics) or _diagnostics_from_reasons(self.reasons))
 
     @classmethod
     def ok(cls) -> "LegalReport":
@@ -20,10 +47,22 @@ class LegalReport:
     def fail(cls, *reasons: str) -> "LegalReport":
         return cls(False, tuple(reasons))
 
+    def to_json_dict(self) -> dict[str, Any]:
+        return {
+            "schema_version": LEGAL_DIAGNOSTIC_SCHEMA_VERSION,
+            "legal": self.legal,
+            "reasons": list(self.reasons),
+            "diagnostics": [diagnostic.to_json_dict() for diagnostic in self.diagnostics],
+        }
+
 
 class ConstraintEngine:
     def __init__(self, loadout_pool: Iterable[Loadout] = ()) -> None:
         self.loadout_pool = tuple(loadout_pool)
+        self._sorted_loadout_pool = tuple(sorted(self.loadout_pool, key=lambda item: item.standing_rank))
+        self._sorted_pool_cache: dict[tuple[Loadout, ...], tuple[Loadout, ...]] = {
+            self.loadout_pool: self._sorted_loadout_pool
+        }
 
     def check_team(self, team: Team) -> LegalReport:
         reasons: list[str] = []
@@ -192,6 +231,33 @@ class ConstraintEngine:
         if remaining_team_slots_after_candidate <= 0:
             return True
         candidate_pool = self.loadout_pool if pool is None else pool
+        return self._future_feasible_with_sorted_pool(
+            candidate,
+            current_team_slots=current_team_slots,
+            remaining_team_slots_after_candidate=remaining_team_slots_after_candidate,
+            used_hero_ids=used_hero_ids,
+            used_unique_equip_ids=used_unique_equip_ids,
+            sorted_pool=self._sorted_candidate_pool(candidate_pool),
+        )
+
+    def _future_feasible_with_sorted_pool(
+        self,
+        candidate: Loadout,
+        *,
+        current_team_slots: tuple[Loadout, ...],
+        remaining_team_slots_after_candidate: int,
+        used_hero_ids: frozenset[int],
+        used_unique_equip_ids: frozenset[int],
+        sorted_pool: tuple[Loadout, ...],
+    ) -> bool:
+        if candidate.hero_id in used_hero_ids:
+            return False
+        if candidate.unique_equip_id is not None and candidate.unique_equip_id in used_unique_equip_ids:
+            return False
+        if current_team_slots and candidate.standing_rank <= current_team_slots[-1].standing_rank:
+            return False
+        if remaining_team_slots_after_candidate <= 0:
+            return True
         heroes = set(used_hero_ids)
         equips = set(used_unique_equip_ids)
         heroes.add(candidate.hero_id)
@@ -199,7 +265,7 @@ class ConstraintEngine:
             equips.add(candidate.unique_equip_id)
         count = 0
         last_rank = candidate.standing_rank
-        for loadout in sorted(candidate_pool, key=lambda item: item.standing_rank):
+        for loadout in sorted_pool:
             if loadout.standing_rank <= last_rank:
                 continue
             if loadout.hero_id in heroes:
@@ -215,6 +281,14 @@ class ConstraintEngine:
                 return True
         return False
 
+    def _sorted_candidate_pool(self, candidate_pool: tuple[Loadout, ...]) -> tuple[Loadout, ...]:
+        cached = self._sorted_pool_cache.get(candidate_pool)
+        if cached is not None:
+            return cached
+        sorted_pool = tuple(sorted(candidate_pool, key=lambda item: item.standing_rank))
+        self._sorted_pool_cache[candidate_pool] = sorted_pool
+        return sorted_pool
+
     def legal_action_mask(
         self,
         candidate_pool: tuple[Loadout, ...],
@@ -223,18 +297,46 @@ class ConstraintEngine:
         remaining_team_slots_after_candidate: int,
         used_hero_ids: frozenset[int],
         used_unique_equip_ids: frozenset[int],
+        use_future_feasibility: bool = True,
     ) -> tuple[bool, ...]:
+        if use_future_feasibility:
+            sorted_pool = self._sorted_candidate_pool(candidate_pool)
+            return tuple(
+                self._future_feasible_with_sorted_pool(
+                    loadout,
+                    current_team_slots=current_team_slots,
+                    remaining_team_slots_after_candidate=remaining_team_slots_after_candidate,
+                    used_hero_ids=used_hero_ids,
+                    used_unique_equip_ids=used_unique_equip_ids,
+                    sorted_pool=sorted_pool,
+                )
+                for loadout in candidate_pool
+            )
         return tuple(
-            self.future_feasible(
+            self._immediate_feasible(
                 loadout,
                 current_team_slots=current_team_slots,
-                remaining_team_slots_after_candidate=remaining_team_slots_after_candidate,
                 used_hero_ids=used_hero_ids,
                 used_unique_equip_ids=used_unique_equip_ids,
-                pool=candidate_pool,
             )
             for loadout in candidate_pool
         )
+
+    def _immediate_feasible(
+        self,
+        candidate: Loadout,
+        *,
+        current_team_slots: tuple[Loadout, ...],
+        used_hero_ids: frozenset[int],
+        used_unique_equip_ids: frozenset[int],
+    ) -> bool:
+        if candidate.hero_id in used_hero_ids:
+            return False
+        if candidate.unique_equip_id is not None and candidate.unique_equip_id in used_unique_equip_ids:
+            return False
+        if current_team_slots and candidate.standing_rank <= current_team_slots[-1].standing_rank:
+            return False
+        return True
 
     def _forward_check(
         self,
@@ -291,3 +393,54 @@ class ConstraintEngine:
                 slots.append(loadout)
             teams.append(Team(tuple(slots)))
         return tuple(teams)
+
+
+def _diagnostics_from_reasons(reasons: tuple[str, ...]) -> tuple[LegalDiagnostic, ...]:
+    return tuple(_diagnostic_from_reason(reason) for reason in reasons)
+
+
+def _diagnostic_from_reason(reason: str) -> LegalDiagnostic:
+    subject = reason
+    path: tuple[str, ...] = ()
+    if reason.startswith("team ") and ": " in reason:
+        team_prefix, subject = reason.split(": ", 1)
+        team_token = team_prefix.split()[1]
+        path = ("teams", f"team_{team_token}")
+    code = _diagnostic_code(subject)
+    if code.startswith("MASK_"):
+        path = _mask_path(path)
+    elif code == "FORMAT_TEAM_COUNT":
+        path = ("format", "n_teams")
+    return LegalDiagnostic(
+        code=code,
+        message=reason,
+        path=path,
+        severity="error",
+        details=(("raw_reason", reason),),
+    )
+
+
+def _diagnostic_code(subject: str) -> str:
+    if "duplicate hero" in subject:
+        return "DUPLICATE_HERO"
+    if "duplicate unique equipment" in subject:
+        return "DUPLICATE_UNIQUE_EQUIP"
+    if "standing_rank" in subject:
+        return "STANDING_ORDER"
+    if "unique equipment star" in subject:
+        return "UNIQUE_EQUIP_STAR"
+    if "team count mismatch" in subject:
+        return "FORMAT_TEAM_COUNT"
+    if "mask exceeds per-team limit" in subject:
+        return "MASK_PER_TEAM_LIMIT"
+    if "mask entries" in subject:
+        return "MASK_VALUE"
+    if "mask exceeds global hidden limit" in subject:
+        return "MASK_GLOBAL_LIMIT"
+    return "LEGALITY_VIOLATION"
+
+
+def _mask_path(path: tuple[str, ...]) -> tuple[str, ...]:
+    if len(path) == 2 and path[0] == "teams":
+        return ("mask", path[1])
+    return ("mask",)

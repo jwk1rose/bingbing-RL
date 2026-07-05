@@ -35,18 +35,27 @@ class HeuristicSurrogateScorer:
     residual so tests can validate ranking/search behavior deterministically.
     """
 
-    def __init__(self, power_scale: float = 650.0, base_uncertainty: float = 0.08) -> None:
+    def __init__(
+        self,
+        power_scale: float = 650.0,
+        base_uncertainty: float = 0.08,
+        *,
+        use_equipment_star_features: bool = True,
+        use_position_features: bool = True,
+    ) -> None:
         self.power_scale = float(power_scale)
         self.base_uncertainty = float(base_uncertainty)
+        self.use_equipment_star_features = bool(use_equipment_star_features)
+        self.use_position_features = bool(use_position_features)
 
     def predict(self, attack: Team, defense: Team) -> SurrogatePrediction:
         attack_power = attack.total_power
         defense_power = defense.total_power
         power_delta = attack_power - defense_power
-        attack_star = _average_star(attack)
-        defense_star = _average_star(defense)
+        attack_star = _average_star(attack) if self.use_equipment_star_features else 0.0
+        defense_star = _average_star(defense) if self.use_equipment_star_features else 0.0
         star_delta = attack_star - defense_star
-        position_delta = _position_profile(attack) - _position_profile(defense)
+        position_delta = _position_profile(attack) - _position_profile(defense) if self.use_position_features else 0.0
         residual = 0.08 * math.tanh(star_delta / 2.0) + 0.04 * math.tanh(position_delta / 5.0)
         logit = power_delta / self.power_scale + residual
         win_prob = 1.0 / (1.0 + math.exp(-logit))

@@ -12,6 +12,7 @@ from .models import (
     VisibleSlot,
     observe_defense,
 )
+from .run_metadata import RunArtifactRef, RunMetadataManifest
 
 __all__ = [
     "AttackPlan",
@@ -21,6 +22,8 @@ __all__ = [
     "MatchFormat",
     "Observation",
     "ResultMetadata",
+    "RunArtifactRef",
+    "RunMetadataManifest",
     "Team",
     "VisibleSlot",
     "observe_defense",

@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+from dataclasses import replace
+
 from masked_team_league.belief import BeliefEngine
 from masked_team_league.constraints import ConstraintEngine
 from masked_team_league.evaluation import match_win_probability
 from masked_team_league.models import DefensePlan, Team, observe_defense
+from masked_team_league.surrogate import HeuristicSurrogateScorer
 
 
 def test_match_win_probability_bo3_and_bo5():
@@ -39,3 +42,21 @@ def test_belief_completions_are_legal_and_include_visible_slots(loadouts, fmt3):
         assert visible_slot.hero_id == loadouts[1].hero_id
         reconstructed = DefensePlan(fmt3, roster, ((0, 0, 0, 0, 0),) * 3, "completion")
         assert engine.is_legal_defense(reconstructed)
+
+
+def test_heuristic_surrogate_can_ablate_position_and_equipment_star_features(loadouts):
+    attack = Team(loadouts[:5])
+    defense = Team(loadouts[5:10])
+    reordered_attack = Team((loadouts[1], loadouts[0], loadouts[2], loadouts[3], loadouts[4]))
+    changed_star = 5 if loadouts[0].unique_equip_star != 5 else 3
+    star_changed = Team((replace(loadouts[0], unique_equip_star=changed_star), *loadouts[1:5]))
+
+    position_aware = HeuristicSurrogateScorer(use_position_features=True)
+    no_position = HeuristicSurrogateScorer(use_position_features=False)
+    assert position_aware.predict(attack, defense).win_prob != position_aware.predict(reordered_attack, defense).win_prob
+    assert no_position.predict(attack, defense).win_prob == no_position.predict(reordered_attack, defense).win_prob
+
+    star_aware = HeuristicSurrogateScorer(use_equipment_star_features=True)
+    no_star = HeuristicSurrogateScorer(use_equipment_star_features=False)
+    assert star_aware.predict(attack, defense).win_prob != star_aware.predict(star_changed, defense).win_prob
+    assert no_star.predict(attack, defense).win_prob == no_star.predict(star_changed, defense).win_prob

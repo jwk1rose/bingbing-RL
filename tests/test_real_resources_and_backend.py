@@ -11,6 +11,7 @@ from masked_team_league.constraints import ConstraintEngine
 from masked_team_league.generation import LegalPlanGenerator
 from masked_team_league.models import AttackPlan, DefensePlan, MatchFormat, Team
 from masked_team_league.resources import (
+    DEFAULT_ORACLE_EXCLUDED_HERO_IDS,
     RuntimeResourceRules,
     load_decoded_runtime_rules,
     load_hero_resource_bundle,
@@ -68,6 +69,17 @@ def test_load_hero_resource_bundle_does_not_treat_normal_equips_as_unique(tmp_pa
 
     assert bundle.by_hero_id[1].unique_equip_id is None
     assert bundle.by_hero_id[1].normal_equip_ids[-1] == 1001
+
+
+def test_load_hero_resource_bundle_can_exclude_oracle_unstable_heroes(tmp_path: Path) -> None:
+    heroes_path = tmp_path / "heroes.json"
+    _write_heroes(heroes_path, count=50)
+
+    bundle = load_hero_resource_bundle(heroes_path, excluded_hero_ids=DEFAULT_ORACLE_EXCLUDED_HERO_IDS)
+
+    assert 45 not in bundle.by_hero_id
+    assert 75 not in bundle.by_hero_id
+    assert all(loadout.hero_id not in DEFAULT_ORACLE_EXCLUDED_HERO_IDS for loadout in bundle.loadouts)
 
 
 def test_build_plan_battle_requests_uses_backend_proto_shape(tmp_path: Path) -> None:
